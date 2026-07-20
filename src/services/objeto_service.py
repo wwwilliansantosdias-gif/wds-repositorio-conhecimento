@@ -1,4 +1,4 @@
-"""Serviço para cadastro, atualização e consulta de objetos."""
+"""Serviço para cadastro, atualização, consulta e gerenciamento de objetos."""
 
 from __future__ import annotations
 
@@ -31,17 +31,35 @@ class ObjetoService(BaseService):
     ) -> Objeto:
         """Cadastra um objeto ativo e devolve seu estado persistido."""
         agora = _agora_utc()
+
         with self.database.connection() as connection:
             with connection:
                 cursor = connection.execute(
                     """
                     INSERT INTO tabela_objetos (
-                        titulo, tipo, caminho, resumo, hash_arquivo, status,
-                        data_criacao, data_edicao, data_exclusao
-                    ) VALUES (?, ?, ?, ?, ?, 'ativo', ?, ?, NULL)
+                        titulo,
+                        tipo,
+                        caminho,
+                        resumo,
+                        hash_arquivo,
+                        status,
+                        data_criacao,
+                        data_edicao,
+                        data_exclusao
+                    )
+                    VALUES (?, ?, ?, ?, ?, 'ativo', ?, ?, NULL)
                     """,
-                    (titulo, tipo, caminho, resumo, hash_arquivo, agora, agora),
+                    (
+                        titulo,
+                        tipo,
+                        caminho,
+                        resumo,
+                        hash_arquivo,
+                        agora,
+                        agora,
+                    ),
                 )
+
                 objeto_id = cursor.lastrowid
 
             return _obter_objeto(connection, objeto_id)
@@ -56,14 +74,17 @@ class ObjetoService(BaseService):
         resumo: str | None | _CampoNaoInformado = _CAMPO_NAO_INFORMADO,
         hash_arquivo: str | None | _CampoNaoInformado = _CAMPO_NAO_INFORMADO,
     ) -> Objeto:
-        """Atualiza os metadados editáveis de um objeto existente.
-
-        O status, a data de criação e a data de exclusão não fazem parte
-        desta operação, pois pertencem ao fluxo de lixeira.
-        """
+        """Atualiza os metadados editáveis de um objeto existente."""
         agora = _agora_utc()
-        atualizacoes = ["titulo = ?", "tipo = ?"]
-        valores: list[object] = [titulo, tipo]
+
+        atualizacoes = [
+            "titulo = ?",
+            "tipo = ?",
+        ]
+        valores: list[object] = [
+            titulo,
+            tipo,
+        ]
 
         for coluna, valor in (
             ("caminho", caminho),
@@ -80,14 +101,18 @@ class ObjetoService(BaseService):
         with self.database.connection() as connection:
             with connection:
                 cursor = connection.execute(
-                    "UPDATE tabela_objetos "
-                    f"SET {', '.join(atualizacoes)} "
-                    "WHERE id = ?",
+                    f"""
+                    UPDATE tabela_objetos
+                    SET {", ".join(atualizacoes)}
+                    WHERE id = ?
+                    """,
                     valores,
                 )
 
                 if cursor.rowcount == 0:
-                    raise LookupError(f"objeto não encontrado: {objeto_id}")
+                    raise LookupError(
+                        f"objeto não encontrado: {objeto_id}"
+                    )
 
             return _obter_objeto(connection, objeto_id)
 
@@ -97,7 +122,7 @@ class ObjetoService(BaseService):
             return _obter_objeto(connection, objeto_id)
 
     def listar(self) -> list[Objeto]:
-        """Lista todos os objetos cadastrados em ordem de identificador."""
+        """Lista todos os objetos cadastrados em ordem crescente de identificador."""
         with self.database.connection() as connection:
             rows = connection.execute(
                 """
@@ -109,25 +134,63 @@ class ObjetoService(BaseService):
 
         return [Objeto(**dict(row)) for row in rows]
 
+    def excluir(self, objeto_id: int) -> Objeto:
+        """Move um objeto para a lixeira."""
+        agora = _agora_utc()
+
+        with self.database.connection() as connection:
+            with connection:
+                cursor = connection.execute(
+                    """
+                    UPDATE tabela_objetos
+                    SET
+                        status = 'lixeira',
+                        data_edicao = ?,
+                        data_exclusao = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        agora,
+                        agora,
+                        objeto_id,
+                    ),
+                )
+
+                if cursor.rowcount == 0:
+                    raise LookupError(
+                        f"objeto não encontrado: {objeto_id}"
+                    )
+
+            return _obter_objeto(connection, objeto_id)
+
 
 def _agora_utc() -> str:
-    """Retorna a data atual em formato ISO 8601 com fuso horário UTC."""
+    """Retorna a data e hora atual em UTC no formato ISO 8601."""
     return datetime.now(timezone.utc).isoformat()
 
 
-def _obter_objeto(connection: sqlite3.Connection, objeto_id: int | None) -> Objeto:
-    """Converte o registro SQLite do identificador informado em ``Objeto``."""
+def _obter_objeto(
+    connection: sqlite3.Connection,
+    objeto_id: int | None,
+) -> Objeto:
+    """Obtém um objeto persistido pelo identificador."""
     if objeto_id is None:
         raise RuntimeError(
             "SQLite não retornou o identificador do objeto cadastrado"
         )
 
     row = connection.execute(
-        "SELECT * FROM tabela_objetos WHERE id = ?",
+        """
+        SELECT *
+        FROM tabela_objetos
+        WHERE id = ?
+        """,
         (objeto_id,),
     ).fetchone()
 
     if row is None:
-        raise LookupError(f"objeto não encontrado: {objeto_id}")
+        raise LookupError(
+            f"objeto não encontrado: {objeto_id}"
+        )
 
     return Objeto(**dict(row))

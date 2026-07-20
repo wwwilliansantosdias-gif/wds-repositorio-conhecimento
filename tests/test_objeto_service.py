@@ -182,23 +182,12 @@ class ObjetoServiceTests(unittest.TestCase):
             self.service.obter_por_id(999)
 
     def test_listar_sem_objetos_retorna_lista_vazia(self) -> None:
-        objetos = self.service.listar()
-
-        self.assertEqual(objetos, [])
+        self.assertEqual(self.service.listar(), [])
 
     def test_listar_retorna_objetos_em_ordem_de_id(self) -> None:
-        primeiro = self.service.cadastrar(
-            "Primeiro",
-            "Nota",
-        )
-        segundo = self.service.cadastrar(
-            "Segundo",
-            "Artigo",
-        )
-        terceiro = self.service.cadastrar(
-            "Terceiro",
-            "Livro",
-        )
+        primeiro = self.service.cadastrar("Primeiro", "Nota")
+        segundo = self.service.cadastrar("Segundo", "Artigo")
+        terceiro = self.service.cadastrar("Terceiro", "Livro")
 
         objetos = self.service.listar()
 
@@ -215,6 +204,41 @@ class ObjetoServiceTests(unittest.TestCase):
             [objeto.tipo for objeto in objetos],
             ["Nota", "Artigo", "Livro"],
         )
+
+    def test_excluir_altera_status_e_define_data_exclusao(self) -> None:
+        cadastrado = self.service.cadastrar(
+            "Documento",
+            "PDF",
+        )
+
+        excluido = self.service.excluir(cadastrado.id)
+
+        self.assertEqual(excluido.status, "lixeira")
+        self.assertIsNotNone(excluido.data_exclusao)
+        self.assertGreaterEqual(
+            datetime.fromisoformat(excluido.data_edicao),
+            datetime.fromisoformat(cadastrado.data_criacao),
+        )
+
+        with self.database.connection() as connection:
+            row = connection.execute(
+                """
+                SELECT status, data_exclusao
+                FROM tabela_objetos
+                WHERE id = ?
+                """,
+                (cadastrado.id,),
+            ).fetchone()
+
+        self.assertEqual(row["status"], "lixeira")
+        self.assertIsNotNone(row["data_exclusao"])
+
+    def test_excluir_objeto_inexistente_informa_ausencia_do_registro(self) -> None:
+        with self.assertRaisesRegex(
+            LookupError,
+            "objeto não encontrado: 999",
+        ):
+            self.service.excluir(999)
 
 
 if __name__ == "__main__":
