@@ -241,5 +241,44 @@ class ObjetoServiceTests(unittest.TestCase):
             self.service.excluir(999)
 
 
+    def test_restaurar_retorna_objeto_ativo_e_limpa_data_exclusao(self) -> None:
+        cadastrado = self.service.cadastrar(
+            "Documento",
+            "PDF",
+        )
+
+        excluido = self.service.excluir(cadastrado.id)
+
+        restaurado = self.service.restaurar(cadastrado.id)
+
+        self.assertEqual(restaurado.status, "ativo")
+        self.assertIsNone(restaurado.data_exclusao)
+        self.assertGreaterEqual(
+            datetime.fromisoformat(restaurado.data_edicao),
+            datetime.fromisoformat(excluido.data_edicao),
+        )
+
+        with self.database.connection() as connection:
+            row = connection.execute(
+                """
+                SELECT status, data_exclusao
+                FROM tabela_objetos
+                WHERE id = ?
+                """,
+                (cadastrado.id,),
+            ).fetchone()
+
+        self.assertEqual(row["status"], "ativo")
+        self.assertIsNone(row["data_exclusao"])
+
+    def test_restaurar_objeto_inexistente_informa_ausencia_do_registro(self) -> None:
+        with self.assertRaisesRegex(
+            LookupError,
+            "objeto não encontrado: 999",
+        ):
+            self.service.restaurar(999)
+
+
+
 if __name__ == "__main__":
     unittest.main()

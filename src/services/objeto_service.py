@@ -163,6 +163,34 @@ class ObjetoService(BaseService):
 
             return _obter_objeto(connection, objeto_id)
 
+    def restaurar(self, objeto_id: int) -> Objeto:
+        """Restaura um objeto da lixeira."""
+        agora = _agora_utc()
+
+        with self.database.connection() as connection:
+            with connection:
+                cursor = connection.execute(
+                    """
+                    UPDATE tabela_objetos
+                    SET
+                        status = 'ativo',
+                        data_edicao = ?,
+                        data_exclusao = NULL
+                    WHERE id = ?
+                    """,
+                    (
+                        agora,
+                        objeto_id,
+                    ),
+                )
+
+                if cursor.rowcount == 0:
+                    raise LookupError(
+                        f"objeto não encontrado: {objeto_id}"
+                    )
+
+            return _obter_objeto(connection, objeto_id)
+
 
 def _agora_utc() -> str:
     """Retorna a data e hora atual em UTC no formato ISO 8601."""
