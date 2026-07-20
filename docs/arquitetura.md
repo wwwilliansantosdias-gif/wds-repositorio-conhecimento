@@ -1,199 +1,310 @@
-# Projeto — Repositório Pessoal de Conhecimento (Protótipo em Python)
+# Arquitetura — WDS Acervo de Conhecimento
 
-**Versão 3** — fundação da v2 (validada) + uma única adição: busca por significado. As apostas do segundo documento (IA generativa local, extração automática de conceitos, grafo, integração multi-agente) ficam fora por enquanto — ver seção final, com o motivo de cada uma.
+**Versão 4**
 
-## Objetivo
+Este documento define a arquitetura do WDS (Web Document System), uma aplicação desktop em Python destinada à preservação, organização, relacionamento e recuperação de conhecimento pessoal.
 
-Aplicação desktop em Python para armazenar, organizar e recuperar
-conhecimento pessoal — pensamentos, PDFs, links, livros, conceitos —
-com busca tanto por palavra exata quanto por significado.
+O documento estabelece as decisões arquiteturais do projeto e serve como referência para toda implementação.
 
-------------------------------------------------------------------------
+---
 
-# Princípios
+# Objetivo
 
--   Dados locais (offline).
--   Código modular.
--   Fácil expansão.
--   Interface simples.
--   Busca rápida.
--   Arquivos legíveis fora da aplicação.
--   Nenhuma peça entra na arquitetura sem ser testável de forma objetiva.
+O WDS permite que o usuário construa um **Acervo de Conhecimento**, reunindo diferentes tipos de informação em um único ambiente.
 
-------------------------------------------------------------------------
+Cada item armazenado é tratado como um **Objeto de Conhecimento**, independentemente de sua mídia.
+
+O sistema organiza conhecimento por meio de metadados, relacionamentos e mecanismos de busca, preservando a independência entre o modelo de domínio e o formato físico dos arquivos.
+
+---
+
+# Princípios Arquiteturais
+
+- Dados locais (offline).
+- Código modular.
+- Arquitetura em camadas.
+- Separação entre domínio e interface.
+- Baixo acoplamento.
+- Alta coesão.
+- Fácil expansão.
+- Interface responsiva.
+- Busca eficiente.
+- Arquivos acessíveis fora da aplicação.
+- Nenhum componente é incorporado sem possibilidade de testes objetivos.
+
+---
+
+# Modelo de Domínio
+
+O elemento central do sistema é o **Objeto de Conhecimento**.
+
+Um Objeto de Conhecimento representa qualquer informação considerada relevante pelo usuário, independentemente do formato em que esteja armazenada.
+
+Exemplos:
+
+- notas
+- pensamentos
+- documentos
+- PDFs
+- livros
+- artigos
+- imagens
+- fotografias
+- áudios
+- vídeos
+- links
+- pessoas
+- conceitos
+- projetos
+- citações
+
+Todos compartilham o mesmo modelo de domínio.
+
+A mídia é apenas uma característica do objeto, nunca sua definição arquitetural.
+
+---
 
 # Tecnologias
 
-  Camada              Tecnologia
-  ------------------- -------------------------
-  Linguagem           Python 3
-  Interface            CustomTkinter
-  Banco de dados       SQLite
-  Busca por palavra    SQLite FTS5
-  Busca por sentido    ChromaDB + sentence-transformers (modelo multilíngue) 🆕
-  PDFs                 PyMuPDF
-  Texto                Markdown
-  Configurações        JSON
-  Segundo plano        threading (módulo padrão do Python)
+| Camada | Tecnologia |
+|---------|------------|
+| Linguagem | Python 3 |
+| Interface | CustomTkinter |
+| Persistência | SQLite |
+| Busca textual | SQLite FTS5 |
+| Busca semântica | ChromaDB |
+| Embeddings | sentence-transformers (modelo multilíngue) |
+| PDF | PyMuPDF |
+| Texto | Markdown |
+| Configuração | JSON |
+| Processamento assíncrono | threading |
 
-------------------------------------------------------------------------
+---
 
-# Estrutura de Pastas
+# Organização dos Arquivos
 
-A pasta não organiza — quem organiza é o banco (tags e relações). Todo
-arquivo é salvo internamente pelo seu `id`, não pelo título.
+A organização lógica do acervo é realizada pelo banco de dados.
 
-``` text
-Repositorio/
+A estrutura física dos diretórios existe apenas para armazenamento.
+
+Os arquivos nunca são organizados por assunto ou categoria.
+
+O nome físico utiliza sempre o identificador do objeto.
+
+```
+Projeto/
 
 ├── app.py
 ├── banco.db
 ├── config.json
 │
 ├── acervo/
-│   ├── pdfs/
-│   ├── notas/
+│   ├── documentos/
 │   ├── imagens/
-│   └── links/
+│   ├── audios/
+│   ├── videos/
+│   └── outros/
 │
-├── vetores/          (base do ChromaDB) 🆕
+├── vetores/
 │
 └── backups/
 ```
 
-------------------------------------------------------------------------
+Caso novos tipos de mídia sejam suportados futuramente, a arquitetura permanece inalterada.
 
-# Arquitetura
+---
 
-## Camada de Interface
+# Arquitetura em Camadas
 
--   Dashboard
--   Pesquisa (palavra + sentido) 🆕
--   Biblioteca
--   Editor Markdown
--   Configurações
+## Interface
 
-## Camada de Serviços
+Responsável exclusivamente pela interação com o usuário.
 
--   Cadastro
--   Pesquisa
--   Importação de PDF
--   Indexação (texto e vetor) 🆕
--   Tags
--   Relacionamentos
--   Detecção de duplicatas
--   Lixeira / exclusão reversível
+Exemplos:
 
-## Camada de Persistência
+- Dashboard
+- Pesquisa
+- Biblioteca
+- Visualização dos Objetos
+- Configurações
 
--   SQLite — metadados (título, caminho, tipo, tags, relações, status).
--   ChromaDB — vetor de significado de cada objeto, referenciado pelo mesmo `id` do SQLite. 🆕
--   Arquivos Markdown/PDF — conteúdo original.
+A interface nunca implementa regras de negócio.
 
-## Processamento em Segundo Plano
+---
 
-Toda importação/indexação (incluindo geração do vetor de significado)
-roda numa thread separada, desde a v1. Evita travar a interface.
+## Serviços
 
-------------------------------------------------------------------------
+Contém toda a lógica da aplicação.
 
-# Busca por Significado 🆕
+Responsabilidades:
 
-Ao salvar um objeto, o texto é transformado num vetor numérico que
-representa seu sentido (não suas palavras exatas), via
-sentence-transformers. Esse vetor é guardado no ChromaDB.
+- cadastro de objetos;
+- edição;
+- exclusão;
+- importação;
+- pesquisa;
+- indexação;
+- gerenciamento de tags;
+- gerenciamento de relacionamentos;
+- detecção de duplicatas;
+- lixeira.
 
-Na pesquisa, o usuário pode escolher:
--   **Busca por palavra** (FTS5) — encontra o termo exato.
--   **Busca por sentido** (ChromaDB) — encontra o que é parecido em
-    significado, mesmo com palavras diferentes.
+Toda regra de negócio pertence a esta camada.
 
-Critério de sucesso: a busca por sentido só permanece na v1 se, no uso
-real, devolver resultados úteis que a busca por palavra não encontraria.
-Caso contrário, é descartada — não é adicionada complexidade permanente
-sem retorno comprovado.
+---
 
-------------------------------------------------------------------------
+## Persistência
 
-# Tipos de Objetos
+Responsável pelo armazenamento dos dados.
 
-Pensamento, PDF, Livro, Artigo, Link, Pessoa, Conceito, Projeto,
-Citação. Todos podem se relacionar entre si.
+### SQLite
 
-------------------------------------------------------------------------
+Armazena:
 
-# Funcionalidades da Primeira Versão
+- objetos;
+- metadados;
+- tags;
+- relacionamentos;
+- configurações;
+- histórico.
 
--   Cadastro de pensamentos
--   Editor Markdown
--   Cadastro de links
--   Cadastro de PDFs
--   Sistema de tags
--   Pesquisa textual (palavra)
--   Pesquisa por significado 🆕
--   Abertura do arquivo original
--   Organização por tags (não por pasta)
--   Detecção de duplicata na importação
--   Exclusão para lixeira
--   Importação/indexação em thread separada
+É a fonte oficial dos dados do sistema.
 
-------------------------------------------------------------------------
+### ChromaDB
 
-# Banco de Dados (Modelo Inicial)
+Armazena exclusivamente os vetores utilizados na busca semântica.
 
-## tabela_objetos
+Utiliza o mesmo identificador do objeto existente no SQLite.
 
-id, titulo, tipo, caminho, resumo, hash_arquivo, status (ativo/lixeira),
-data_criacao, data_edicao, data_exclusao
+Nunca duplica metadados.
 
-## tabela_tags
+### Sistema de Arquivos
 
-id, nome
+Armazena apenas os arquivos físicos pertencentes ao acervo.
 
-## tabela_objeto_tag
+---
 
-objeto_id, tag_id
+# Processamento em Segundo Plano
 
-## tabela_relacoes
+Operações potencialmente demoradas executam em threads independentes.
 
-origem, destino, tipo_relacao
+Exemplos:
 
-## Vetores (ChromaDB, fora do SQLite) 🆕
+- importação;
+- extração de texto;
+- geração de embeddings;
+- indexação.
 
-Cada entrada usa o mesmo `id` de tabela_objetos como chave — não existe
-tabela extra no SQLite para isso, o ChromaDB guarda seu próprio índice.
+A interface permanece responsiva durante todo o processamento.
 
-------------------------------------------------------------------------
+---
+
+# Busca
+
+O sistema possui dois mecanismos independentes.
+
+## Busca Textual
+
+Baseada no SQLite FTS5.
+
+Utilizada para localizar palavras e expressões exatas.
+
+---
+
+## Busca Semântica
+
+Baseada em embeddings armazenados no ChromaDB.
+
+Permite localizar Objetos de Conhecimento semelhantes em significado.
+
+Sua permanência depende da demonstração de benefício prático durante o uso do sistema.
+
+---
+
+# Modelo Inicial de Dados
+
+## Objetos
+
+Cada Objeto de Conhecimento possui, inicialmente:
+
+- id
+- título
+- tipo
+- caminho
+- resumo
+- hash
+- status
+- data de criação
+- data de edição
+- data de exclusão
+
+---
+
+## Tags
+
+Permitem organização lógica independente da estrutura física.
+
+---
+
+## Relacionamentos
+
+Conectam Objetos de Conhecimento entre si.
+
+Os relacionamentos independem do tipo de mídia.
+
+---
+
+## Vetores
+
+Os embeddings permanecem exclusivamente no ChromaDB.
+
+Cada vetor utiliza o mesmo identificador do objeto correspondente no SQLite.
+
+---
+
+# Fluxo Geral
+
+1. Importação ou criação de um Objeto de Conhecimento.
+2. Armazenamento dos metadados.
+3. Armazenamento do arquivo físico, quando existir.
+4. Indexação textual.
+5. Geração do embedding (quando aplicável).
+6. Organização por metadados.
+7. Recuperação por pesquisa ou navegação.
+
+---
 
 # Backup
 
-Um backup só é válido se copiar `banco.db` + pasta `acervo/` + pasta
-`vetores/` juntos. 🆕 Faltando qualquer uma das três, o backup fica
-inconsistente.
+Um backup completo deve conter:
 
-------------------------------------------------------------------------
+- banco.db
+- pasta acervo/
+- pasta vetores/
 
-# Fluxo de Uso
+A ausência de qualquer um desses componentes torna o backup incompleto.
 
-1.  Adicionar um PDF (checa duplicata antes de salvar).
-2.  Extrai texto, gera vetor de significado, indexa por palavra. 🆕
-3.  Criar nota em Markdown, associar tags, relacionar a outros objetos.
-4.  Pesquisar por palavra exata **ou** por sentido.
-5.  Abrir qualquer conteúdo diretamente.
-6.  Excluir manda para a lixeira.
+---
 
-------------------------------------------------------------------------
+# Evolução da Arquitetura
 
-# Fora de Escopo por Enquanto
+A arquitetura foi projetada para evolução incremental.
 
-Itens do segundo documento que **não** entram nesta versão — e o
-motivo específico de cada um, para não serem reintroduzidos sem
-critério mais tarde:
+Novas funcionalidades devem reutilizar o modelo de Objeto de Conhecimento existente.
 
--   **IA generativa local (Ollama) / perguntas em linguagem natural** — depende de RAM/hardware da máquina, ainda não avaliado.
--   **Extração automática de conceitos e relações** — sem solução confiável para texto filosófico/aforístico; risco alto de gerar ruído em vez de conexões reais.
--   **Grafo de conhecimento** — só compensa quando o acervo tiver volume suficiente para existir rede de relações que valha visualizar.
--   **Integração com outros agentes (WDS, Comercial etc.)** — depende de cada uma dessas ferramentas já estar madura o bastante para expor uma interface de consulta.
+Mudanças arquiteturais somente podem ocorrer mediante atualização desta documentação.
 
-Cada um desses pode voltar como uma fase futura independente, quando
-tiver uma forma objetiva de testar se funciona — não antes. 
+---
+
+# Fora do Escopo da Arquitetura Atual
+
+As funcionalidades abaixo permanecem planejadas para versões futuras e não fazem parte desta arquitetura:
+
+- IA generativa local;
+- perguntas em linguagem natural;
+- extração automática de conceitos;
+- extração automática de relacionamentos;
+- grafo de conhecimento;
+- integração com outros agentes.
+
+Esses recursos somente poderão ser incorporados após validação técnica e atualização desta arquitetura.

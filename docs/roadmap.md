@@ -2,23 +2,38 @@
 
 ## Objetivo
 
-Este documento define a ordem oficial de desenvolvimento do projeto.
+Este documento define a sequência oficial de desenvolvimento do WDS – Acervo de Conhecimento.
 
-Cada fase deve ser concluída, testada e revisada antes do início da próxima.
+Cada fase representa um incremento funcional completo, devendo ser implementada, testada e validada antes do início da fase seguinte.
 
-Nenhuma funcionalidade deve ser implementada fora da fase correspondente.
+Nenhuma funcionalidade deve ser antecipada sem atualização deste Roadmap.
+
+---
+
+# Princípios
+
+Todo desenvolvimento deve respeitar:
+
+- o Conceito do Acervo de Conhecimento;
+- a Arquitetura do projeto;
+- o AGENTS.md;
+- este Roadmap.
+
+A implementação é incremental.
+
+Cada fase deve entregar software funcional.
 
 ---
 
 # Fase 1 — Fundação
 
-Objetivo:
+## Objetivo
 
-Criar a estrutura básica do projeto.
+Estabelecer a estrutura inicial do projeto.
 
-Itens:
+## Itens
 
-- Estrutura de pastas
+- Estrutura de diretórios
 - Ambiente Python
 - pyproject.toml
 - requirements.txt
@@ -27,57 +42,57 @@ Itens:
 - app.py
 - Organização dos módulos
 
-Critério de conclusão:
+## Critério de conclusão
 
-O projeto executa sem erros.
+O projeto executa corretamente e possui a estrutura básica definida.
 
 ---
 
-# Fase 2 — Banco de Dados
+# Fase 2 — Persistência
 
-Objetivo:
+## Objetivo
 
-Criar toda a persistência de dados.
+Implementar a infraestrutura de armazenamento dos metadados.
 
-Itens:
+## Itens
 
 - SQLite
-- Criação automática do banco
+- Inicialização automática
 - Criação das tabelas
-- Camada de acesso aos dados
+- Camada de persistência
 - Migração inicial
 
-Critério de conclusão:
+## Critério de conclusão
 
-O banco é criado automaticamente.
+O banco é criado automaticamente e todas as tabelas estão disponíveis.
 
 ---
 
-# Fase 3 — Modelos
+# Fase 3 — Modelo de Domínio
 
-Objetivo:
+## Objetivo
 
-Criar os modelos da aplicação.
+Implementar o modelo de Objetos de Conhecimento.
 
-Itens:
+## Itens
 
-- Objeto
+- Objeto de Conhecimento
 - Tag
-- Relação
+- Relacionamento
 
-Critério de conclusão:
+## Critério de conclusão
 
-Todos os modelos possuem testes.
+Todos os modelos estão implementados e possuem testes automatizados.
 
 ---
 
 # Fase 4 — Serviços
 
-Objetivo:
+## Objetivo
 
-Implementar a lógica de negócio.
+Implementar toda a lógica de negócio da aplicação.
 
-Itens:
+## Itens
 
 - Cadastro
 - Atualização
@@ -85,118 +100,148 @@ Itens:
 - Lixeira
 - Tags
 - Relacionamentos
+- Validações
+- Regras de negócio
 
-Critério de conclusão:
+## Critério de conclusão
 
-CRUD completo funcionando.
+Todos os serviços funcionam corretamente e possuem testes.
 
 ---
 
 # Fase 5 — Pesquisa
 
-Objetivo:
+## Objetivo
 
-Implementar os mecanismos de busca.
+Implementar os mecanismos de recuperação da informação.
 
-Itens:
+## Itens
+
+### Busca textual
 
 - SQLite FTS5
-- Pesquisa textual
+
+### Busca semântica
+
 - ChromaDB
-- Pesquisa por significado
+- sentence-transformers
 
-Critério de conclusão:
+## Critério de conclusão
 
-As duas pesquisas funcionam.
+As pesquisas textual e semântica retornam resultados consistentes.
 
 ---
 
 # Fase 6 — Importação
 
-Objetivo:
+## Objetivo
 
-Importar conteúdo externo.
+Permitir a incorporação de conteúdo ao Acervo de Conhecimento.
 
-Itens:
+## Itens
 
-- PDFs
-- Links
-- Markdown
+- Importação de PDFs
+- Importação de Markdown
+- Cadastro de links
+- Extração de texto
+- Detecção de duplicatas
+- Indexação em segundo plano
 
-Critério de conclusão:
+## Critério de conclusão
 
-Importação completa.
+Os conteúdos são importados, armazenados e indexados corretamente.
 
 ---
 
-# Fase 7 — Interface
+# Fase 7 — Interface Gráfica
 
-Objetivo:
+## Objetivo
 
-Criar a interface gráfica.
+Disponibilizar uma interface completa para utilização do sistema.
 
-Itens:
+## Itens
 
 - Dashboard
 - Biblioteca
 - Pesquisa
-- Editor
+- Visualização dos Objetos
+- Editor Markdown
 - Configurações
 
-Critério de conclusão:
+## Critério de conclusão
 
-Aplicação utilizável.
+Todas as funcionalidades do MVP podem ser utilizadas pela interface.
 
 ---
 
-# Fase 8 — Backup
+# Fase 8 — Backup e Recuperação
 
-Objetivo:
+## Objetivo
 
-Garantir recuperação dos dados.
+Garantir a preservação do Acervo de Conhecimento.
 
-Itens:
+## Itens
 
 - Backup
 - Restauração
-- Validação
+- Validação de integridade
 
-Critério de conclusão:
+## Critério de conclusão
 
-Backup testado.
+O sistema restaura integralmente um backup válido.
 
 ---
 
-# Fase 9 — Testes
+# Fase 9 — Testes e Validação
 
-Objetivo:
+## Objetivo
 
-Validar todo o sistema.
+Garantir a qualidade do sistema antes da primeira versão.
 
-Itens:
+## Itens
 
 - Testes unitários
 - Testes de integração
-- Testes de persistência
+- Testes da persistência
+- Testes dos serviços
+- Testes da pesquisa
 
-Critério de conclusão:
+## Critério de conclusão
 
-Todos os testes aprovados.
+Todos os testes são aprovados.
 
 ---
 
-# Fase 10 — Release
+# Fase 10 — Release 1.0
 
-Objetivo:
+## Objetivo
 
-Preparar a primeira versão.
+Preparar a primeira versão pública do sistema.
 
-Itens:
+## Itens
 
-- Documentação
+- Revisão da documentação
 - Ajustes finais
 - Empacotamento
+- Geração do instalador
 
-Critério de conclusão:
+## Critério de conclusão
 
-Versão 1.0 pronta para uso.
+Versão 1.0 pronta para distribuição.
+
+---
+
+# Evolução Pós-MVP
+
+As funcionalidades abaixo permanecem fora do escopo da versão 1.0 e somente poderão ser implementadas mediante atualização da arquitetura e deste Roadmap.
+
+- OCR
+- Transcrição de áudio
+- Inteligência Artificial generativa
+- Perguntas em linguagem natural
+- Extração automática de conceitos
+- Extração automática de relacionamentos
+- Grafo de conhecimento
+- Integração com agentes externos
+
+Essas funcionalidades deverão reutilizar o modelo de Objeto de Conhecimento existente, preservando a arquitetura do sistema.

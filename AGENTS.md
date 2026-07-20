@@ -1,40 +1,59 @@
 # AGENTS.md
 
-## Objetivo
+# Objetivo
 
-Este repositório contém a implementação do projeto
-"WDS Repositório de Conhecimento".
+Este repositório contém a implementação do projeto **WDS – Acervo de Conhecimento**.
 
-Todo desenvolvimento deve respeitar a arquitetura definida em:
+O WDS é uma aplicação desktop em Python destinada à preservação, organização, relacionamento e recuperação de conhecimento pessoal.
 
+Todo desenvolvimento deve respeitar rigorosamente a arquitetura definida em:
+
+```
 docs/arquitetura.md
+```
 
-Se houver conflito entre uma implementação e a arquitetura,
-a arquitetura prevalece.
+Em caso de conflito entre qualquer implementação e a documentação arquitetural, a arquitetura sempre prevalece.
 
 ---
 
-# Papel do agente
+# Papel do Agente
 
-O agente atua como desenvolvedor Python sênior.
+O agente atua como desenvolvedor Python sênior responsável por implementar funcionalidades de forma incremental e consistente.
 
-Antes de modificar qualquer arquivo:
+Antes de modificar qualquer arquivo, deve obrigatoriamente:
 
-1. Ler docs/arquitetura.md.
+1. Ler `docs/arquitetura.md`.
 2. Verificar se a alteração está de acordo com a arquitetura.
-3. Caso exista conflito, interromper a implementação e informar o motivo.
+3. Confirmar que a implementação pertence à fase atual do Roadmap.
+4. Caso exista conflito, interromper a implementação e informar o motivo.
 
 Nunca assumir requisitos que não estejam documentados.
+
+Nunca criar funcionalidades por iniciativa própria.
+
+---
+
+# Princípios do Projeto
+
+O modelo de domínio do WDS é baseado no conceito de **Objeto de Conhecimento**.
+
+Todo conteúdo armazenado representa um Objeto de Conhecimento, independentemente de sua mídia.
+
+Documentos, imagens, áudios, vídeos, fotografias, códigos, anotações ou qualquer outro formato utilizam o mesmo modelo conceitual.
+
+Novos tipos de mídia nunca devem alterar o modelo de domínio.
 
 ---
 
 # Escopo
 
-Implementar somente o que for solicitado na Issue atual.
+Implementar exclusivamente o que for solicitado pela Issue ou incremento atual.
 
 Não antecipar funcionalidades futuras.
 
 Não adicionar dependências sem necessidade.
+
+Não alterar requisitos arquiteturais.
 
 ---
 
@@ -50,19 +69,19 @@ CustomTkinter
 
 ---
 
-# Banco
+# Persistência
 
-SQLite
+SQLite é a fonte oficial de todos os metadados.
 
 ---
 
-# Busca textual
+# Busca Textual
 
 SQLite FTS5
 
 ---
 
-# Busca por significado
+# Busca Semântica
 
 ChromaDB
 
@@ -70,13 +89,17 @@ sentence-transformers
 
 Modelo multilíngue.
 
+O banco vetorial é complementar ao SQLite.
+
+Nunca duplicar informações entre ambos.
+
 ---
 
-# Organização
+# Organização do Código
 
-Todo código deve permanecer modular.
+O projeto deve permanecer organizado em camadas.
 
-Separar:
+Separar responsabilidades entre:
 
 - interface
 - serviços
@@ -84,61 +107,67 @@ Separar:
 - modelos
 - utilitários
 
----
+Toda regra de negócio deve permanecer na camada de serviços.
 
-# Banco de dados
-
-O SQLite é a fonte principal de metadados.
-
-O ChromaDB armazena apenas vetores.
-
-Nunca duplicar informações entre eles.
+Evitar dependências cruzadas entre camadas.
 
 ---
 
-# Arquivos
+# Arquivos do Usuário
 
-Os arquivos do usuário ficam em:
+Os arquivos pertencentes ao Acervo de Conhecimento ficam armazenados em:
 
+```
 acervo/
+```
 
-Nunca utilizar o título do objeto como nome do arquivo.
+O nome físico do arquivo nunca deve utilizar o título do objeto.
 
-O identificador é sempre o id do banco.
-
----
-
-# Threads
-
-Toda importação pesada deve executar em segundo plano.
-
-A interface nunca deve bloquear.
+O identificador oficial é sempre o ID registrado no banco de dados.
 
 ---
 
-# Código
+# Desempenho
 
-Priorizar:
+Operações demoradas devem executar em segundo plano.
+
+A interface gráfica nunca deve bloquear durante importações, indexações ou processamentos.
+
+---
+
+# Qualidade do Código
+
+Priorizar sempre:
 
 - simplicidade
 - legibilidade
 - baixo acoplamento
 - alta coesão
+- reutilização
+- manutenção
 
 Evitar:
 
 - código duplicado
-- funções muito grandes
-- classes gigantes
+- funções excessivamente grandes
+- classes monolíticas
 - dependências desnecessárias
+- otimizações prematuras
 
 ---
 
 # Testes
 
-Toda funcionalidade nova deve possuir testes.
+Toda funcionalidade nova deve possuir testes automatizados.
 
-Nenhuma implementação é considerada concluída se não puder ser testada.
+Nenhuma implementação é considerada concluída sem validação por testes.
+
+Sempre que possível:
+
+- testar regras de negócio;
+- testar serviços;
+- testar persistência;
+- evitar dependência da interface gráfica.
 
 ---
 
@@ -146,18 +175,23 @@ Nenhuma implementação é considerada concluída se não puder ser testada.
 
 Não alterar a arquitetura.
 
+Não modificar o modelo de domínio sem atualização da documentação.
+
 Não substituir bibliotecas sem justificativa.
 
-Não criar funcionalidades fora da Issue.
+Não criar funcionalidades fora da Issue atual.
 
 Não alterar comportamento existente sem necessidade.
 
+Não introduzir acoplamentos desnecessários.
+
 ---
 
-# Fluxo
+# Fluxo de Desenvolvimento
 
-Sempre seguir:
+Todo desenvolvimento deve seguir obrigatoriamente o fluxo:
 
+```
 Issue
 
 ↓
@@ -179,15 +213,19 @@ Revisão
 ↓
 
 Merge
+```
 
-Nunca pular etapas.
+Nenhuma etapa deve ser ignorada.
 
 ---
 
-# Em caso de dúvida
+# Em Caso de Dúvida
 
-Perguntar antes de implementar.
+Quando houver ambiguidade ou ausência de requisitos:
 
-Não inventar requisitos.
+- interromper a implementação;
+- solicitar esclarecimentos;
+- nunca inventar requisitos;
+- nunca assumir comportamentos não documentados.
 
-Não criar funcionalidades por iniciativa própria.
+A documentação do projeto sempre possui prioridade sobre interpretações da implementação existente.
