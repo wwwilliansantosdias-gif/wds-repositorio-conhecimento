@@ -134,6 +134,34 @@ class ObjetoService(BaseService):
 
         return [Objeto(**dict(row)) for row in rows]
 
+    def listar_ativos(self) -> list[Objeto]:
+        """Lista objetos ativos em ordem crescente de identificador."""
+        with self.database.connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT *
+                FROM tabela_objetos
+                WHERE status = 'ativo'
+                ORDER BY id
+                """
+            ).fetchall()
+
+        return [Objeto(**dict(row)) for row in rows]
+
+    def listar_lixeira(self) -> list[Objeto]:
+        """Lista objetos na lixeira do mais recentemente excluído ao mais antigo."""
+        with self.database.connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT *
+                FROM tabela_objetos
+                WHERE status = 'lixeira'
+                ORDER BY data_exclusao DESC
+                """
+            ).fetchall()
+
+        return [Objeto(**dict(row)) for row in rows]
+
     def excluir(self, objeto_id: int) -> Objeto:
         """Move um objeto para a lixeira."""
         agora = _agora_utc()
@@ -190,6 +218,39 @@ class ObjetoService(BaseService):
                     )
 
             return _obter_objeto(connection, objeto_id)
+
+    def excluir_definitivamente(self, objeto_id: int) -> None:
+        """Remove um objeto da lixeira e todos os vínculos que o referenciam."""
+        with self.database.connection() as connection:
+            with connection:
+                objeto = _obter_objeto(connection, objeto_id)
+                if objeto.status != "lixeira":
+                    raise ValueError(
+                        "objeto ativo não pode ser excluído definitivamente: "
+                        f"{objeto_id}"
+                    )
+
+                connection.execute(
+                    """
+                    DELETE FROM tabela_objeto_tag
+                    WHERE objeto_id = ?
+                    """,
+                    (objeto_id,),
+                )
+                connection.execute(
+                    """
+                    DELETE FROM tabela_relacoes
+                    WHERE origem = ? OR destino = ?
+                    """,
+                    (objeto_id, objeto_id),
+                )
+                connection.execute(
+                    """
+                    DELETE FROM tabela_objetos
+                    WHERE id = ?
+                    """,
+                    (objeto_id,),
+                )
 
 
 def _agora_utc() -> str:

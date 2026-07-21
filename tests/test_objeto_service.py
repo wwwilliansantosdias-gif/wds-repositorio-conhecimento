@@ -16,6 +16,8 @@ if str(SOURCE_DIRECTORY) not in sys.path:
 
 from persistence import Database
 from services.objeto_service import ObjetoService
+from services.relacao_service import RelacaoService
+from services.tag_service import TagService
 
 
 class ObjetoServiceTests(unittest.TestCase):
@@ -205,6 +207,28 @@ class ObjetoServiceTests(unittest.TestCase):
             ["Nota", "Artigo", "Livro"],
         )
 
+    def test_listar_ativos_retorna_apenas_objetos_ativos_em_ordem_de_id(self) -> None:
+        primeiro = self.service.cadastrar("Primeiro", "Nota")
+        segundo = self.service.cadastrar("Segundo", "Artigo")
+        terceiro = self.service.cadastrar("Terceiro", "Livro")
+        self.service.excluir(segundo.id)
+
+        objetos = self.service.listar_ativos()
+
+        self.assertEqual([objeto.id for objeto in objetos], [primeiro.id, terceiro.id])
+        self.assertEqual([objeto.status for objeto in objetos], ["ativo", "ativo"])
+
+    def test_listar_lixeira_retorna_objetos_por_exclusao_mais_recente(self) -> None:
+        primeiro = self.service.cadastrar("Primeiro", "Nota")
+        segundo = self.service.cadastrar("Segundo", "Artigo")
+        self.service.excluir(primeiro.id)
+        self.service.excluir(segundo.id)
+
+        objetos = self.service.listar_lixeira()
+
+        self.assertEqual([objeto.id for objeto in objetos], [segundo.id, primeiro.id])
+        self.assertEqual([objeto.status for objeto in objetos], ["lixeira", "lixeira"])
+
     def test_excluir_altera_status_e_define_data_exclusao(self) -> None:
         cadastrado = self.service.cadastrar(
             "Documento",
@@ -277,6 +301,36 @@ class ObjetoServiceTests(unittest.TestCase):
             "objeto não encontrado: 999",
         ):
             self.service.restaurar(999)
+
+    def test_excluir_definitivamente_rejeita_objeto_ativo(self) -> None:
+        objeto = self.service.cadastrar("Documento", "PDF")
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "objeto ativo não pode ser excluído definitivamente",
+        ):
+            self.service.excluir_definitivamente(objeto.id)
+
+        self.assertEqual(self.service.obter_por_id(objeto.id).status, "ativo")
+
+    def test_excluir_definitivamente_remove_vinculos_e_preserva_entidades(self) -> None:
+        tag_service = TagService(self.database)
+        relacao_service = RelacaoService(self.database)
+        objeto = self.service.cadastrar("Documento", "PDF")
+        outro_objeto = self.service.cadastrar("Nota", "Pensamento")
+        tag = tag_service.criar("importante")
+        tag_service.associar(objeto.id, tag.id)
+        relacao_service.criar(objeto.id, outro_objeto.id, "referencia")
+        self.service.excluir(objeto.id)
+
+        self.service.excluir_definitivamente(objeto.id)
+
+        with self.assertRaisesRegex(LookupError, "objeto não encontrado"):
+            self.service.obter_por_id(objeto.id)
+
+        self.assertEqual(tag_service.listar(), [tag])
+        self.assertEqual(relacao_service.listar_por_objeto(outro_objeto.id), [])
+        self.assertEqual(self.service.obter_por_id(outro_objeto.id).status, "ativo")
 
 
 

@@ -252,6 +252,17 @@ Conectam Objetos de Conhecimento entre si.
 
 Os relacionamentos independem do tipo de mídia.
 
+Auto-relações não são permitidas: a origem e o destino de um relacionamento
+devem sempre ser Objetos de Conhecimento distintos.
+
+Quando um objeto é excluído logicamente e movido para a lixeira, suas relações
+permanecem inalteradas. Isso preserva os vínculos para que sejam recuperados
+quando o objeto for restaurado.
+
+Na exclusão definitiva de um objeto da lixeira, as associações de tags e todas
+as relações em que ele é origem ou destino são removidas na mesma transação.
+As Tags e os demais Objetos de Conhecimento envolvidos permanecem preservados.
+
 ---
 
 ## Vetores
