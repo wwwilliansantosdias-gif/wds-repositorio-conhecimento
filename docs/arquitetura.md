@@ -2,7 +2,7 @@
 
 **Versão 4**
 
-Este documento define a arquitetura do WDS (Web Document System), uma aplicação desktop em Python destinada à preservação, organização, relacionamento e recuperação de conhecimento pessoal.
+Este documento define a arquitetura do WDS (Willian Dias Santos) – Acervo de Conhecimento, uma aplicação desktop em Python destinada à preservação, organização, relacionamento e recuperação de conhecimento pessoal.
 
 O documento estabelece as decisões arquiteturais do projeto e serve como referência para toda implementação.
 

@@ -3,7 +3,7 @@ requires = ["setuptools>=80"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "wds-repositorio-conhecimento"
+name = "WDS - Acervo de Conhecimento"
 version = "0.1.0"
 description = "Repositório pessoal de conhecimento"
 requires-python = ">=3.14"

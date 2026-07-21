@@ -1,4 +1,4 @@
-"""Ponto de entrada da aplicação WDS Repositório de Conhecimento."""
+"""Ponto de entrada da aplicação WDS – Acervo de Conhecimento."""
 
 from __future__ import annotations
 
