@@ -52,7 +52,64 @@ INITIAL_SCHEMA_STATEMENTS = (
     """,
 )
 
-MIGRATIONS = ((1, INITIAL_SCHEMA_STATEMENTS),)
+FTS5_SCHEMA_STATEMENTS = (
+    """
+    CREATE VIRTUAL TABLE tabela_objetos_fts USING fts5(
+        titulo,
+        resumo,
+        content='tabela_objetos',
+        content_rowid='id',
+        tokenize='unicode61 remove_diacritics 2',
+        prefix='2 3 4'
+    )
+    """,
+    """
+    INSERT INTO tabela_objetos_fts (rowid, titulo, resumo)
+    SELECT id, titulo, resumo
+    FROM tabela_objetos
+    """,
+    """
+    CREATE TRIGGER tabela_objetos_fts_after_insert
+    AFTER INSERT ON tabela_objetos
+    BEGIN
+        INSERT INTO tabela_objetos_fts (rowid, titulo, resumo)
+        VALUES (NEW.id, NEW.titulo, NEW.resumo);
+    END
+    """,
+    """
+    CREATE TRIGGER tabela_objetos_fts_after_update
+    AFTER UPDATE OF titulo, resumo ON tabela_objetos
+    BEGIN
+        INSERT INTO tabela_objetos_fts (
+            tabela_objetos_fts,
+            rowid,
+            titulo,
+            resumo
+        )
+        VALUES ('delete', OLD.id, OLD.titulo, OLD.resumo);
+        INSERT INTO tabela_objetos_fts (rowid, titulo, resumo)
+        VALUES (NEW.id, NEW.titulo, NEW.resumo);
+    END
+    """,
+    """
+    CREATE TRIGGER tabela_objetos_fts_after_delete
+    AFTER DELETE ON tabela_objetos
+    BEGIN
+        INSERT INTO tabela_objetos_fts (
+            tabela_objetos_fts,
+            rowid,
+            titulo,
+            resumo
+        )
+        VALUES ('delete', OLD.id, OLD.titulo, OLD.resumo);
+    END
+    """,
+)
+
+MIGRATIONS = (
+    (1, INITIAL_SCHEMA_STATEMENTS),
+    (2, FTS5_SCHEMA_STATEMENTS),
+)
 
 
 class Database:

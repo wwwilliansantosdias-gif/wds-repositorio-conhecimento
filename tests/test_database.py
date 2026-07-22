@@ -73,7 +73,7 @@ class DatabaseTests(unittest.TestCase):
                     }
                     self.assertEqual(actual_columns, columns)
 
-    def test_initial_migration_is_applied_only_once(self) -> None:
+    def test_migrations_are_applied_only_once(self) -> None:
         with TemporaryDirectory() as temporary_directory:
             database = Database(Path(temporary_directory) / "banco.db")
             database.initialize()
@@ -84,7 +84,7 @@ class DatabaseTests(unittest.TestCase):
                     "SELECT version FROM schema_migrations"
                 ).fetchall()
 
-            self.assertEqual([row["version"] for row in migrations], [1])
+            self.assertEqual([row["version"] for row in migrations], [1, 2])
 
     def test_connections_enable_foreign_keys(self) -> None:
         with TemporaryDirectory() as temporary_directory:

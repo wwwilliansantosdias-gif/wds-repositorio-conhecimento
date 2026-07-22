@@ -173,11 +173,19 @@ Modelo Relação
 
 CRUD de Objetos
 
+Status
+
+Concluída
+
 ---
 
 ## Issue 13
 
 CRUD de Tags
+
+Status
+
+Concluída
 
 ---
 
@@ -185,11 +193,19 @@ CRUD de Tags
 
 Relacionamentos
 
+Status
+
+Concluída
+
 ---
 
 ## Issue 15
 
 Lixeira
+
+Status
+
+Concluída
 
 ---
 

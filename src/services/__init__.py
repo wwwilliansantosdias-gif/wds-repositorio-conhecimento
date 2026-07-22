@@ -2,6 +2,7 @@
 
 from services.base import BaseService
 from services.objeto_service import ObjetoService
+from services.pesquisa_service import PesquisaService
 from services.relacao_service import RelacaoService
 from services.tag_service import TagService
 from services.types import DomainModel
@@ -10,6 +11,7 @@ __all__ = [
     "BaseService",
     "DomainModel",
     "ObjetoService",
+    "PesquisaService",
     "RelacaoService",
     "TagService",
 ]
