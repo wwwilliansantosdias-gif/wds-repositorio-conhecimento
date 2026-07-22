@@ -1,0 +1,120 @@
+"""Serviço de indexação e busca semântica com ChromaDB."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from threading import Lock
+
+import chromadb
+from chromadb.api.models.Collection import Collection
+from sentence_transformers import SentenceTransformer
+
+from models import Objeto
+from services.base import BaseService
+from services.objeto_service import ObjetoService
+
+
+DEFAULT_CHROMA_PATH = Path(__file__).resolve().parents[2] / "chroma_db"
+COLLECTION_NAME = "objetos_conhecimento"
+MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
+_CANDIDATE_MULTIPLIER = 3
+
+_model: SentenceTransformer | None = None
+_model_lock = Lock()
+
+
+class EmbeddingService(BaseService):
+    """Mantém embeddings no ChromaDB e recupera objetos semanticamente."""
+
+    def __init__(
+        self,
+        database,
+        chroma_path: Path | str = DEFAULT_CHROMA_PATH,
+    ) -> None:
+        super().__init__(database)
+        self._model = _obter_modelo()
+        self._client = chromadb.PersistentClient(path=str(chroma_path))
+        self._collection: Collection = self._client.get_or_create_collection(
+            name=COLLECTION_NAME,
+            metadata={"hnsw:space": "cosine"},
+            embedding_function=None,
+        )
+        self._objeto_service = ObjetoService(database)
+
+    def indexar_objeto(
+        self,
+        objeto_id: int,
+        titulo: str,
+        resumo: str | None,
+    ) -> None:
+        """Gera e grava ou atualiza o embedding de um objeto."""
+        texto = titulo if resumo is None else f"{titulo}\n{resumo}"
+        self._collection.upsert(
+            ids=[str(objeto_id)],
+            embeddings=[self._gerar_embedding(texto)],
+            metadatas=[{"objeto_id": objeto_id}],
+        )
+
+    def remover_do_indice(self, objeto_id: int) -> None:
+        """Remove o embedding associado ao identificador informado."""
+        self._collection.delete(ids=[str(objeto_id)])
+
+    def buscar_semantico(
+        self,
+        termo: str,
+        limite: int = 10,
+    ) -> list[tuple[Objeto, float]]:
+        """Retorna objetos ativos ordenados por similaridade semântica."""
+        if limite <= 0:
+            return []
+
+        quantidade_indexada = self._collection.count()
+        if quantidade_indexada == 0:
+            return []
+
+        quantidade_candidatos = min(
+            quantidade_indexada,
+            limite * _CANDIDATE_MULTIPLIER,
+        )
+        resultado = self._collection.query(
+            query_embeddings=[self._gerar_embedding(termo)],
+            n_results=quantidade_candidatos,
+            include=["distances"],
+        )
+        ids = resultado["ids"][0]
+        distancias = resultado["distances"][0]
+
+        encontrados: list[tuple[Objeto, float]] = []
+        for identificador, distancia in zip(ids, distancias, strict=True):
+            try:
+                objeto = self._objeto_service.obter_por_id(int(identificador))
+            except LookupError:
+                # Um vetor residual não representa mais um objeto no SQLite.
+                continue
+
+            if objeto.status != "ativo":
+                continue
+
+            encontrados.append((objeto, _score_percentual(distancia)))
+
+        encontrados.sort(key=lambda resultado: resultado[1], reverse=True)
+        return encontrados[:limite]
+
+    def _gerar_embedding(self, texto: str) -> list[float]:
+        return self._model.encode(texto).tolist()
+
+
+def _obter_modelo() -> SentenceTransformer:
+    """Carrega o modelo uma vez por processo, pois a carga é custosa."""
+    global _model
+
+    with _model_lock:
+        if _model is None:
+            _model = SentenceTransformer(MODEL_NAME)
+        return _model
+
+
+def _score_percentual(distancia: float) -> float:
+    """Converte a distância cosseno do ChromaDB em similaridade percentual."""
+    similaridade = 1 - distancia
+    return round(max(0.0, min(1.0, similaridade)) * 100, 0)
