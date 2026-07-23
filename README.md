@@ -1,6 +1,6 @@
 # WDS – Acervo de Conhecimento
 
-O WDS (Web Document System) é uma aplicação desktop desenvolvida em Python para preservação, organização, relacionamento e recuperação de conhecimento pessoal.
+O WDS (Willian Dias Santos) – Acervo de Conhecimento é uma aplicação desktop desenvolvida em Python para preservação, organização, relacionamento e recuperação de conhecimento pessoal.
 
 Seu objetivo é permitir que cada usuário construa um **Acervo de Conhecimento** ao longo da vida, reunindo diferentes tipos de conteúdo em um único ambiente, independentemente do formato da informação.
 
@@ -17,7 +17,7 @@ O sistema fornece mecanismos para:
 - preservar conhecimento;
 - organizar objetos;
 - relacionar informações;
-- recuperar conteúdo rapidamente;
+- recuperar conteúdo rapidamente, por palavra-chave ou por significado;
 - permitir evolução contínua do acervo.
 
 O significado de cada objeto é definido exclusivamente pelo usuário.
@@ -30,22 +30,26 @@ O significado de cada objeto é definido exclusivamente pelo usuário.
 - O usuário define o que possui valor para seu acervo.
 - O armazenamento físico é separado da organização lógica.
 - Objetos podem evoluir continuamente por meio do enriquecimento de metadados.
-- O sistema pode sugerir relações futuramente, mas nunca substituir as decisões do usuário.
+- O sistema pode sugerir relações automaticamente (por similaridade semântica), mas nunca substitui as decisões do usuário.
 
 ---
 
-# MVP
+# Estado Atual do Projeto
 
-A primeira versão do WDS possui foco em:
+- Persistência em SQLite (com integridade referencial via chaves estrangeiras)
+- Gerenciamento completo de Objetos de Conhecimento (cadastro, atualização, exclusão lógica e definitiva, lixeira)
+- Gerenciamento de Tags e Relacionamentos entre objetos
+- Pesquisa textual (SQLite FTS5), com suporte a acentuação e prefixo
+- Pesquisa semântica (ChromaDB + sentence-transformers), com sincronização automática ao cadastrar, atualizar ou excluir objetos
+- Detecção de duplicatas por hash de arquivo (fundação da Fase de Importação)
 
-- armazenamento em SQLite;
-- gerenciamento de Objetos de Conhecimento;
-- organização por metadados;
-- gerenciamento de tags;
-- relacionamentos entre objetos;
-- pesquisa utilizando metadados.
+Em desenvolvimento:
 
-Recursos como OCR, transcrição, busca semântica, IA e indexação vetorial fazem parte da evolução futura do projeto.
+- Importação de PDFs, Markdown e links, com extração automática de texto
+- Interface gráfica (CustomTkinter)
+- Backup e recuperação
+
+Consulte `docs/roadmap.md` e `docs/docs/issues.md` para o detalhamento completo de cada fase e o progresso atualizado.
 
 ---
 
@@ -53,15 +57,11 @@ Recursos como OCR, transcrição, busca semântica, IA e indexação vetorial fa
 
 - Python
 - CustomTkinter
-- SQLite
+- SQLite (com FTS5)
+- ChromaDB
+- sentence-transformers (modelo multilíngue)
 - Arquitetura em camadas
 - Testes automatizados com unittest
-
-Tecnologias planejadas para versões futuras:
-
-- SQLite FTS5
-- ChromaDB
-- Inteligência Artificial
 
 ---
 
@@ -71,10 +71,14 @@ Tecnologias planejadas para versões futuras:
 docs/
 src/
 tests/
+acervo/
+backups/
+vetores/
 
 app.py
 README.md
 AGENTS.md
+pyproject.toml
 ```
 
 ---

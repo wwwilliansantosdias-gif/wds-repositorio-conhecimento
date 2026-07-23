@@ -20,7 +20,7 @@ from persistence.database import initialize_database
 def create_application() -> ctk.CTk:
     """Cria a janela principal vazia da aplicação."""
     application = ctk.CTk()
-    application.title("WDS Repositório de Conhecimento")
+    application.title("WDS – Acervo de Conhecimento")
     return application
 
 
