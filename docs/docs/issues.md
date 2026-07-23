@@ -9,6 +9,33 @@ docs/arquitetura.md.
 
 ---
 
+# Progresso Geral
+
+**19 de 32 Issues concluidas (~59%).**
+
+Esta contagem pesa cada Issue igualmente e nao reflete o esforco real de
+cada uma -- a Fase 7 (Interface Grafica), por exemplo, tende a exigir
+muito mais trabalho do que uma unica Issue de banco de dados. Use como
+direcao aproximada, nao como medida precisa.
+
+Atualizar esta secao e o campo Status de cada Issue sempre que uma fase
+for concluida.
+
+| Fase | Status |
+|---|---|
+| 1 -- Fundacao | Concluida |
+| 2 -- Persistencia | Concluida |
+| 3 -- Modelo de Dominio | Concluida |
+| 4 -- Servicos | Concluida |
+| 5 -- Pesquisa | Concluida |
+| 6 -- Importacao | Em andamento (~15%) |
+| 7 -- Interface Grafica | Nao iniciada |
+| 8 -- Backup e Recuperacao | Nao iniciada |
+| 9 -- Testes e Validacao | Nao iniciada |
+| 10 -- Release 1.0 | Nao iniciada |
+
+---
+
 # EPIC 1 — Fundação
 
 ## Issue 1
@@ -33,7 +60,7 @@ Critérios de aceitação
 
 Status
 
-Não iniciada
+Concluida
 
 ---
 
@@ -55,7 +82,7 @@ Critérios
 
 Status
 
-Não iniciada
+Concluida
 
 ---
 
@@ -75,7 +102,7 @@ Aplicação abre sem erros.
 
 Status
 
-Não iniciada
+Concluida
 
 ---
 
@@ -95,7 +122,7 @@ Critérios
 
 Status
 
-Não iniciada
+Concluida
 
 ---
 
@@ -107,7 +134,7 @@ Criar tabela_objetos
 
 Status
 
-Não iniciada
+Concluida
 
 ---
 
@@ -119,7 +146,7 @@ Criar tabela_tags
 
 Status
 
-Não iniciada
+Concluida
 
 ---
 
@@ -131,7 +158,7 @@ Criar tabela_objeto_tag
 
 Status
 
-Não iniciada
+Concluida
 
 ---
 
@@ -143,7 +170,7 @@ Criar tabela_relacoes
 
 Status
 
-Não iniciada
+Concluida
 
 ---
 
@@ -153,17 +180,29 @@ Não iniciada
 
 Modelo Objeto
 
+Status
+
+Concluida
+
 ---
 
 ## Issue 10
 
 Modelo Tag
 
+Status
+
+Concluida
+
 ---
 
 ## Issue 11
 
 Modelo Relação
+
+Status
+
+Concluida
 
 ---
 
@@ -215,11 +254,19 @@ Concluída
 
 SQLite FTS5
 
+Status
+
+Concluida
+
 ---
 
 ## Issue 17
 
 Pesquisa textual
+
+Status
+
+Concluida
 
 ---
 
@@ -227,19 +274,51 @@ Pesquisa textual
 
 Integração ChromaDB
 
+Status
+
+Concluida
+
 ---
 
 ## Issue 19
 
 Busca por significado
 
+Status
+
+Concluida
+
+Observação: inclui a sincronia automatica entre cadastro/atualizacao/
+exclusao de objetos e o indice semantico, via AcervoService (nao
+formalizado como Issue separada no backlog original).
+
 ---
 
 # EPIC 6 — Importação
 
+## Issue 19b
+
+Detecção de duplicatas (fundação)
+
+Objetivo
+
+Calcular hash SHA-256 de um arquivo e impedir a importacao de arquivos
+ja presentes no acervo.
+
+Status
+
+Concluida (base implementada em ImportacaoService; ainda nao integrada
+ao fluxo completo de importacao)
+
+---
+
 ## Issue 20
 
 Importação de PDFs
+
+Status
+
+Não iniciada
 
 ---
 
@@ -247,11 +326,19 @@ Importação de PDFs
 
 Importação de Markdown
 
+Status
+
+Não iniciada
+
 ---
 
 ## Issue 22
 
 Importação de Links
+
+Status
+
+Não iniciada
 
 ---
 
@@ -261,11 +348,19 @@ Importação de Links
 
 Dashboard
 
+Status
+
+Não iniciada
+
 ---
 
 ## Issue 24
 
 Biblioteca
+
+Status
+
+Não iniciada
 
 ---
 
@@ -273,17 +368,29 @@ Biblioteca
 
 Pesquisa
 
+Status
+
+Não iniciada
+
 ---
 
 ## Issue 26
 
 Editor Markdown
 
+Status
+
+Não iniciada
+
 ---
 
 ## Issue 27
 
 Configurações
+
+Status
+
+Não iniciada
 
 ---
 
@@ -293,11 +400,19 @@ Configurações
 
 Backup
 
+Status
+
+Não iniciada
+
 ---
 
 ## Issue 29
 
 Restauração
+
+Status
+
+Não iniciada
 
 ---
 
@@ -307,11 +422,21 @@ Restauração
 
 Testes Unitários
 
+Status
+
+Em andamento continuo (testes acompanham cada fase; validacao final
+formal ainda nao realizada)
+
 ---
 
 ## Issue 31
 
 Testes de Integração
+
+Status
+
+Em andamento continuo (existe tests/test_integracao_acervo.py cobrindo
+Objeto+Tag+Relacao; cobertura completa ainda pendente)
 
 ---
 
@@ -320,3 +445,7 @@ Testes de Integração
 ## Issue 32
 
 Versão 1.0
+
+Status
+
+Não iniciada
