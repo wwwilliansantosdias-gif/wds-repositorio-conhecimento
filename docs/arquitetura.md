@@ -273,6 +273,19 @@ Cada vetor utiliza o mesmo identificador do objeto correspondente no SQLite.
 
 ---
 
+## Detecção de Duplicatas
+
+A verificação de duplicidade por hash de arquivo considera apenas Objetos
+de Conhecimento com status ativo.
+
+Um arquivo cujo hash já esteja associado a um objeto na lixeira pode ser
+reimportado normalmente. A permanência de um objeto na lixeira é entendida
+como sinal de que o usuário não deseja mais aquele conteúdo ativo no
+acervo, portanto reimportar o mesmo arquivo não constitui uma duplicata
+indevida.
+
+---
+
 # Fluxo Geral
 
 1. Importação ou criação de um Objeto de Conhecimento.
