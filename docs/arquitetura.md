@@ -197,6 +197,14 @@ Exemplos:
 
 A interface permanece responsiva durante todo o processamento.
 
+**Decisão de sequenciamento**: a implementação efetiva de threading para
+essas operações fica adiada para a Fase 7 (Interface Gráfica). Até o
+momento, `ImportacaoService` e `AcervoService` executam essas operações
+de forma síncrona, pois não existe interface gráfica que possa travar —
+não há benefício em introduzir concorrência antes de haver uma tela para
+proteger. Esta seção descreve o comportamento esperado do produto
+finalizado, não o estado atual da Fase 6.
+
 ---
 
 # Busca
@@ -283,6 +291,16 @@ reimportado normalmente. A permanência de um objeto na lixeira é entendida
 como sinal de que o usuário não deseja mais aquele conteúdo ativo no
 acervo, portanto reimportar o mesmo arquivo não constitui uma duplicata
 indevida.
+
+Links (tipo `Link`) não possuem arquivo físico nem hash de conteúdo. Sua
+detecção de duplicata é feita comparando diretamente a URL armazenada em
+`caminho` entre os objetos ativos, seguindo a mesma regra: um link na
+lixeira não bloqueia o recadastro da mesma URL.
+
+O cadastro de links não busca automaticamente título ou descrição da
+página de destino — isso exigiria uma requisição web a partir da
+aplicação, fora do escopo atual. Título e resumo, quando não informados
+explicitamente, usam a própria URL como valor padrão de título.
 
 ---
 
