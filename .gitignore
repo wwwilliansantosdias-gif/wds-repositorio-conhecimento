@@ -7,4 +7,16 @@ coverage.xml
 dist/
 build/
 *.egg-info/
-banco.db 
+banco.db
+chroma_db/
+
+# Conteudo pessoal importado: protegido, mas a estrutura de pastas
+# permanece rastreada via os arquivos .gitkeep.
+acervo/pdfs/*
+!acervo/pdfs/.gitkeep
+acervo/imagens/*
+!acervo/imagens/.gitkeep
+acervo/notas/*
+!acervo/notas/.gitkeep
+acervo/links/*
+!acervo/links/.gitkeep
