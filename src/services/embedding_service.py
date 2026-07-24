@@ -100,6 +100,66 @@ class EmbeddingService(BaseService):
         encontrados.sort(key=lambda resultado: resultado[1], reverse=True)
         return encontrados[:limite]
 
+    def buscar_similares_a_objeto(
+        self,
+        objeto_id: int,
+        limite: int = 5,
+    ) -> list[tuple[Objeto, float]]:
+        """Retorna objetos ativos semanticamente parecidos com um objeto existente.
+
+        Diferente de buscar_semantico (que parte de um texto de busca
+        digitado pelo usuario), este metodo reaproveita o embedding ja
+        armazenado para objeto_id -- nao gera um novo embedding, apenas
+        reconsulta o vetor existente contra os demais indexados.
+
+        O proprio objeto nunca aparece nos resultados. Usado para
+        preencher a secao "Sugestoes semanticas" do painel de Contexto
+        na interface, ao lado dos relacionamentos explicitos
+        (RelacaoService), que nao possuem score.
+        """
+        if limite <= 0:
+            return []
+
+        registro = self._collection.get(
+            ids=[str(objeto_id)],
+            include=["embeddings"],
+        )
+        if len(registro["ids"]) == 0:
+            return []
+        vetor = registro["embeddings"][0]
+
+        quantidade_indexada = self._collection.count()
+        # +1 para compensar o proprio objeto, que sera excluido a seguir.
+        quantidade_candidatos = min(
+            quantidade_indexada,
+            (limite + 1) * _CANDIDATE_MULTIPLIER,
+        )
+        resultado = self._collection.query(
+            query_embeddings=[vetor],
+            n_results=quantidade_candidatos,
+            include=["distances"],
+        )
+        ids = resultado["ids"][0]
+        distancias = resultado["distances"][0]
+
+        encontrados: list[tuple[Objeto, float]] = []
+        for identificador, distancia in zip(ids, distancias, strict=True):
+            if int(identificador) == objeto_id:
+                continue
+
+            try:
+                objeto = self._objeto_service.obter_por_id(int(identificador))
+            except LookupError:
+                continue
+
+            if objeto.status != "ativo":
+                continue
+
+            encontrados.append((objeto, _score_percentual(distancia)))
+
+        encontrados.sort(key=lambda resultado: resultado[1], reverse=True)
+        return encontrados[:limite]
+
     def _gerar_embedding(self, texto: str) -> list[float]:
         return self._model.encode(texto).tolist()
 

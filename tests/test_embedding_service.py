@@ -73,6 +73,54 @@ class EmbeddingServiceTests(unittest.TestCase):
 
         self.assertEqual(encontrados, [])
 
+    def test_buscar_similares_a_objeto_nunca_inclui_o_proprio_objeto(self) -> None:
+        cachorro = self.objeto_service.cadastrar(
+            "Cachorro", "Nota", resumo="Um animal de estimação leal."
+        )
+        self.service.indexar_objeto(cachorro.id, cachorro.titulo, cachorro.resumo)
+
+        encontrados = self.service.buscar_similares_a_objeto(cachorro.id)
+
+        ids_encontrados = [objeto.id for objeto, _ in encontrados]
+        self.assertNotIn(cachorro.id, ids_encontrados)
+
+    def test_buscar_similares_a_objeto_encontra_por_significado(self) -> None:
+        cachorro = self.objeto_service.cadastrar(
+            "Cachorro", "Nota", resumo="Um animal de estimação leal e domesticado."
+        )
+        cao = self.objeto_service.cadastrar(
+            "Cão de guarda", "Nota", resumo="Protege a casa e late para estranhos."
+        )
+        meteorologia = self.objeto_service.cadastrar(
+            "Previsão do tempo", "Nota", resumo="Vai chover amanhã à tarde."
+        )
+        self.service.indexar_objeto(cachorro.id, cachorro.titulo, cachorro.resumo)
+        self.service.indexar_objeto(cao.id, cao.titulo, cao.resumo)
+        self.service.indexar_objeto(
+            meteorologia.id, meteorologia.titulo, meteorologia.resumo
+        )
+
+        encontrados = self.service.buscar_similares_a_objeto(cachorro.id)
+
+        self.assertEqual(encontrados[0][0].id, cao.id)
+
+    def test_buscar_similares_a_objeto_nao_retorna_objeto_na_lixeira(self) -> None:
+        cachorro = self.objeto_service.cadastrar("Cachorro", "Nota", resumo="Animal leal.")
+        cao = self.objeto_service.cadastrar("Cão", "Nota", resumo="Animal leal e fiel.")
+        self.service.indexar_objeto(cachorro.id, cachorro.titulo, cachorro.resumo)
+        self.service.indexar_objeto(cao.id, cao.titulo, cao.resumo)
+        self.objeto_service.excluir(cao.id)
+
+        encontrados = self.service.buscar_similares_a_objeto(cachorro.id)
+
+        ids_encontrados = [objeto.id for objeto, _ in encontrados]
+        self.assertNotIn(cao.id, ids_encontrados)
+
+    def test_buscar_similares_a_objeto_nao_indexado_retorna_lista_vazia(self) -> None:
+        encontrados = self.service.buscar_similares_a_objeto(99999)
+
+        self.assertEqual(encontrados, [])
+
 
 if __name__ == "__main__":
     unittest.main()
