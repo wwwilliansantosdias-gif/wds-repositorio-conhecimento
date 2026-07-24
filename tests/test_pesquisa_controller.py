@@ -14,8 +14,6 @@ for caminho in (SOURCE_DIRECTORY, UI_DIRECTORY):
     if str(caminho) not in sys.path:
         sys.path.insert(0, str(caminho))
 
-import chromadb
-
 from persistence import Database
 from services.embedding_service import EmbeddingService
 from services.objeto_service import ObjetoService
@@ -35,14 +33,12 @@ class PesquisaControllerTests(unittest.TestCase):
         self.objeto_service = ObjetoService(self.database)
         self.pesquisa_service = PesquisaService(self.database)
 
-        self.embedding_service = object.__new__(EmbeddingService)
-        self.embedding_service._objeto_service = self.objeto_service
-        client = chromadb.PersistentClient(
-            path=str(temporary_path / "chroma_db")
-        )
-        self.embedding_service._collection = client.get_or_create_collection(
-            name="objetos_conhecimento",
-            metadata={"hnsw:space": "cosine"},
+        # Construcao normal, carregando o modelo real -- este controller
+        # precisa gerar embeddings novos a partir do termo de busca
+        # (buscar_semantico), diferente de ObjetoController.
+        self.embedding_service = EmbeddingService(
+            self.database,
+            chroma_path=temporary_path / "chroma_db",
         )
 
         self.controller = PesquisaController(
@@ -50,9 +46,11 @@ class PesquisaControllerTests(unittest.TestCase):
         )
 
     def tearDown(self) -> None:
+        del self.embedding_service
         try:
             self.temporary_directory.cleanup()
         except PermissionError:
+            # O ChromaDB pode manter arquivos temporarios abertos no Windows.
             pass
 
     def test_termo_vazio_retorna_lista_vazia(self) -> None:
@@ -77,9 +75,8 @@ class PesquisaControllerTests(unittest.TestCase):
         objeto = self.objeto_service.cadastrar(
             "Sobre estoicismo", "Nota", resumo="Epicteto e a aceitacao"
         )
-        self.embedding_service._collection.upsert(
-            ids=[str(objeto.id)],
-            embeddings=[[1.0, 0.0]],
+        self.embedding_service.indexar_objeto(
+            objeto.id, objeto.titulo, objeto.resumo
         )
 
         resultados = self.controller.pesquisar("estoicismo")
@@ -96,9 +93,8 @@ class PesquisaControllerTests(unittest.TestCase):
         tambem_semantico = self.objeto_service.cadastrar(
             "Outra nota", "Nota", resumo="tema comum tambem"
         )
-        self.embedding_service._collection.upsert(
-            ids=[str(tambem_semantico.id)],
-            embeddings=[[1.0, 0.0]],
+        self.embedding_service.indexar_objeto(
+            tambem_semantico.id, tambem_semantico.titulo, tambem_semantico.resumo
         )
 
         resultados = self.controller.pesquisar("tema comum")
