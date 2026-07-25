@@ -248,3 +248,41 @@ class ImportacaoService:
                 raise DuplicataError(
                     f"Este link ja esta no acervo (Objeto ID: {objeto.id})."
                 )
+
+    def criar_nota_manual(
+        self,
+        titulo: str,
+        conteudo: str = "",
+    ) -> Objeto:
+        """Cria uma Nota digitada manualmente pelo usuario.
+
+        Salva o conteudo imediatamente como arquivo fisico em
+        acervo/notas/{id}.md -- igual a uma nota importada, para que o
+        Editor Markdown sempre edite um arquivo real, nunca um estado
+        que existe somente no banco (decisao registrada em
+        docs/interface-grafica.md, secao Editor Markdown).
+
+        Diferente de importar_markdown, nao ha arquivo de origem nem
+        hash para verificar duplicata -- cada nota manual nasce unica,
+        vazia ou com o conteudo inicial fornecido.
+        """
+        if not titulo.strip():
+            raise ValueError("O titulo nao pode ser vazio.")
+
+        objeto = self._acervo_service.cadastrar(titulo, "Nota", resumo=conteudo)
+
+        try:
+            self._pasta_notas.mkdir(parents=True, exist_ok=True)
+            caminho_definitivo = self._pasta_notas / f"{objeto.id}.md"
+            caminho_definitivo.write_text(conteudo, encoding="utf-8")
+        except Exception:
+            self._acervo_service.excluir(objeto.id)
+            self._acervo_service.excluir_definitivamente(objeto.id)
+            raise
+
+        return self._acervo_service.atualizar(
+            objeto.id,
+            titulo,
+            "Nota",
+            caminho=str(caminho_definitivo),
+        )
