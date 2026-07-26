@@ -12,6 +12,7 @@ janela separada e nao substitui o conteudo principal.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 import customtkinter as ctk
 
@@ -19,13 +20,15 @@ from widgets.search_bar import SearchBar
 
 
 class Toolbar(ctk.CTkFrame):
+    """Compõe a barra superior de navegação do WDS."""
+
     def __init__(
         self,
-        master,
+        master: Any,
         ao_pesquisar: Callable[[str], None],
         ao_clicar_novo_objeto: Callable[[int, int], None],
         ao_clicar_lixeira: Callable[[], None],
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(master, corner_radius=0, **kwargs)
 
@@ -45,6 +48,7 @@ class Toolbar(ctk.CTkFrame):
             self,
             text="Lixeira",
             width=90,
+            height=36,
             fg_color="gray40",
             hover_color="gray30",
             command=ao_clicar_lixeira,
@@ -55,6 +59,7 @@ class Toolbar(ctk.CTkFrame):
             self,
             text="+ Novo Objeto",
             width=140,
+            height=36,
         )
         self.botao_novo_objeto.grid(row=0, column=3, padx=(0, 16), pady=12)
         self.botao_novo_objeto.bind(

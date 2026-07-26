@@ -40,6 +40,7 @@ class NovoObjetoController:
         *,
         titulo: str | None = None,
     ) -> ResultadoCriacao:
+        """Importa um PDF e converte falhas em um resultado uniforme."""
         try:
             objeto = self._importacao_service.importar_pdf(
                 caminho_arquivo, titulo=titulo
@@ -63,6 +64,7 @@ class NovoObjetoController:
         *,
         titulo: str | None = None,
     ) -> ResultadoCriacao:
+        """Importa um arquivo Markdown e retorna seu resultado uniforme."""
         try:
             objeto = self._importacao_service.importar_markdown(
                 caminho_arquivo, titulo=titulo
@@ -86,6 +88,7 @@ class NovoObjetoController:
         *,
         titulo: str | None = None,
     ) -> ResultadoCriacao:
+        """Cadastra um link e converte falhas em um resultado uniforme."""
         try:
             objeto = self._importacao_service.cadastrar_link(url, titulo=titulo)
             return ResultadoCriacao(sucesso=True, objeto=objeto)

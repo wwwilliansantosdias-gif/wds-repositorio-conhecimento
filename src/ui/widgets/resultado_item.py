@@ -8,6 +8,7 @@ selecionado -- nao decide sozinho o que acontece depois do clique.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 import customtkinter as ctk
 
@@ -15,14 +16,16 @@ from models import Objeto, Tag
 
 
 class ResultadoItem(ctk.CTkFrame):
+    """Apresenta um objeto recuperado em uma lista de resultados."""
+
     def __init__(
         self,
-        master,
+        master: Any,
         objeto: Objeto,
         tags: list[Tag],
         ao_selecionar: Callable[[int], None],
         score: float | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(master, corner_radius=8, **kwargs)
         self._objeto_id = objeto.id
@@ -86,5 +89,5 @@ class ResultadoItem(ctk.CTkFrame):
         for widget in (self, cabecalho, titulo_label):
             widget.bind("<Button-1>", self._selecionar)
 
-    def _selecionar(self, _evento=None) -> None:
+    def _selecionar(self, _evento: object | None = None) -> None:
         self._ao_selecionar(self._objeto_id)

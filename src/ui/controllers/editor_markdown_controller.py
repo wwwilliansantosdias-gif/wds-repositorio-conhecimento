@@ -15,7 +15,7 @@ from models import Objeto
 from services.acervo_service import AcervoService
 
 
-TIPOS_EDITAVEIS = frozenset({"Nota", "Markdown"})
+TIPOS_EDITAVEIS: frozenset[str] = frozenset({"Nota", "Markdown"})
 
 
 @dataclass
@@ -44,10 +44,9 @@ class EditorMarkdownController:
     def carregar(self, objeto_id: int) -> ConteudoNota:
         """Carrega o conteudo fisico de uma Nota para edicao.
 
-        Levanta LookupError se o objeto nao existir, e ValueError se o
+        Levanta LookupError se o objeto nao existir, ValueError se o
         objeto nao for do tipo Nota/Markdown ou nao possuir arquivo
-        fisico associado -- ambos casos que a view deve tratar sem
-        deixar a tela quebrar.
+        fisico associado, e OSError se o arquivo nao puder ser lido.
         """
         objeto = self._acervo_service.obter_por_id(objeto_id)
 

@@ -61,8 +61,7 @@ class ObjetoController:
         """Monta o conteudo completo da tela para um objeto especifico.
 
         Levanta LookupError (via AcervoService/ObjetoService) se
-        objeto_id nao existir -- a view deve tratar esse caso mantendo
-        o objeto em foco anterior, ao inves de deixar a tela em branco.
+        objeto_id nao existir; a View decide como apresentar esse caso.
         """
         objeto = self._acervo_service.obter_por_id(objeto_id)
         tags = self._tag_service.listar_por_objeto(objeto_id)

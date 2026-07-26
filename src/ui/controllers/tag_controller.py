@@ -34,6 +34,7 @@ class TagController:
         return self._tag_service.listar()
 
     def listar_por_objeto(self, objeto_id: int) -> list[Tag]:
+        """Retorna as tags atualmente associadas ao objeto informado."""
         return self._tag_service.listar_por_objeto(objeto_id)
 
     def adicionar_tag(self, objeto_id: int, nome_tag: str) -> ResultadoAdicionarTag:

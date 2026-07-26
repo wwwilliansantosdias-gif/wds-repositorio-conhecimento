@@ -13,6 +13,7 @@ decide sozinha o que acontece depois do clique.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 import customtkinter as ctk
 
@@ -22,13 +23,15 @@ from widgets.resultado_item import ResultadoItem
 
 
 class PesquisaView(ctk.CTkFrame):
+    """Exibe os resultados retornados pelo controller de pesquisa."""
+
     def __init__(
         self,
-        master,
+        master: Any,
         pesquisa_controller: PesquisaController,
         tag_controller: TagController,
         ao_selecionar_objeto: Callable[[int], None],
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
         self._pesquisa_controller = pesquisa_controller

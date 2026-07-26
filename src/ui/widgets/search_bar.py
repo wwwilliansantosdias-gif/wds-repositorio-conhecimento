@@ -8,6 +8,7 @@ nem nenhum Service -- apenas coleta o termo e avisa quem o criou.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any
 
 import customtkinter as ctk
 
@@ -21,10 +22,10 @@ class SearchBar(ctk.CTkFrame):
 
     def __init__(
         self,
-        master,
+        master: Any,
         ao_pesquisar: Callable[[str], None],
         placeholder: str = "Pesquisar no Acervo...",
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
         self._ao_pesquisar = ao_pesquisar
@@ -48,12 +49,14 @@ class SearchBar(ctk.CTkFrame):
         )
         self._botao.grid(row=0, column=1)
 
-    def _disparar_pesquisa(self, _evento=None) -> None:
+    def _disparar_pesquisa(self, _evento: object | None = None) -> None:
         termo = self._campo.get()
         self._ao_pesquisar(termo)
 
     def obter_termo(self) -> str:
+        """Retorna o termo atualmente digitado no campo de busca."""
         return self._campo.get()
 
     def focar(self) -> None:
+        """Posiciona o foco do teclado no campo de busca."""
         self._campo.focus_set()
