@@ -1,7 +1,8 @@
 """Widget de uma tag exibida como "chip" (pilula arredondada).
 
 Pode ser somente leitura (usado na lista de Resultados) ou removivel
-(usado no painel de Objeto em Foco, com um botao "x" ao lado).
+(usado no painel de Objeto em Foco, com um botao "x" ao lado). Tambem
+pode notificar a selecao da tag para iniciar uma pesquisa.
 """
 
 from __future__ import annotations
@@ -22,18 +23,23 @@ class TagChip(ctk.CTkFrame):
         master: Any,
         tag: Tag,
         ao_remover: Callable[[int], None] | None = None,
+        ao_selecionar: Callable[[str], None] | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(
             master, corner_radius=12, fg_color=("#DCEEEC", "#1F3B38"), **kwargs
         )
 
-        ctk.CTkLabel(
+        rotulo = ctk.CTkLabel(
             self,
             text=f"#{tag.nome}",
             font=ctk.CTkFont(size=11),
             text_color="#4FA9A0",
-        ).grid(row=0, column=0, padx=(8, 4 if ao_remover else 8), pady=2)
+        )
+        rotulo.grid(row=0, column=0, padx=(8, 4 if ao_remover else 8), pady=2)
+
+        if ao_selecionar is not None:
+            rotulo.bind("<Button-1>", lambda _evento: ao_selecionar(tag.nome))
 
         if ao_remover is not None:
             ctk.CTkButton(

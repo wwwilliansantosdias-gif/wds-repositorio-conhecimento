@@ -17,6 +17,7 @@ from persistence import Database
 from persistence.database import INITIAL_SCHEMA_STATEMENTS
 from services.objeto_service import ObjetoService
 from services.pesquisa_service import PesquisaService
+from services.tag_service import TagService
 
 
 class PesquisaServiceTests(unittest.TestCase):
@@ -67,6 +68,16 @@ class PesquisaServiceTests(unittest.TestCase):
         encontrados = self.service.buscar_texto("definitiva")
 
         self.assertEqual([encontrado.id for encontrado in encontrados], [objeto.id])
+
+    def test_buscar_texto_encontra_objeto_por_tag_associada(self) -> None:
+        objeto = self.objeto_service.cadastrar("Anotacao", "Nota")
+        tag_service = TagService(self.service.database)
+        tag = tag_service.criar("filosofia")
+        tag_service.associar(objeto.id, tag.id)
+
+        encontrados = self.service.buscar_texto("filosofia")
+
+        self.assertEqual(encontrados, [objeto])
 
     def test_migration_indexa_objetos_existentes(self) -> None:
         legacy_directory = TemporaryDirectory()

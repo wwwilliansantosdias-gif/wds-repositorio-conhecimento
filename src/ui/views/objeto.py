@@ -32,12 +32,14 @@ class ObjetoView(ctk.CTkScrollableFrame):
         objeto_controller: ObjetoController,
         tag_controller: TagController,
         ao_selecionar_objeto: Callable[[int], None],
+        ao_selecionar_tag: Callable[[str], None],
         **kwargs: Any,
     ) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
         self._objeto_controller = objeto_controller
         self._tag_controller = tag_controller
         self._ao_selecionar_objeto = ao_selecionar_objeto
+        self._ao_selecionar_tag = ao_selecionar_tag
         self._objeto_id_atual: int | None = None
 
         self.grid_columnconfigure(0, weight=1)
@@ -167,7 +169,12 @@ class ObjetoView(ctk.CTkScrollableFrame):
     ) -> None:
         coluna = 0
         for tag in tags:
-            chip = TagChip(container, tag, ao_remover=self._remover_tag)
+            chip = TagChip(
+                container,
+                tag,
+                ao_remover=self._remover_tag,
+                ao_selecionar=self._ao_selecionar_tag,
+            )
             chip.grid(row=0, column=coluna, padx=(0, 6))
             coluna += 1
 

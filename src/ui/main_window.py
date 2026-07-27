@@ -123,6 +123,7 @@ class MainWindow(ctk.CTk):
             self.objeto_controller,
             self.tag_controller,
             ao_selecionar_objeto=self._ao_selecionar_objeto,
+            ao_selecionar_tag=self._ao_selecionar_tag,
         )
         self.objeto_view.grid(row=0, column=1, sticky="nsew", padx=(6, 12), pady=12)
 
@@ -133,6 +134,10 @@ class MainWindow(ctk.CTk):
         """Atualiza apenas o painel de Objeto em Foco -- os resultados
         da pesquisa a esquerda permanecem intactos."""
         self.objeto_view.mostrar_objeto(objeto_id)
+
+    def _ao_selecionar_tag(self, nome_tag: str) -> None:
+        """Atualiza os Resultados usando a pesquisa textual da tag."""
+        self.pesquisa_view.pesquisar(nome_tag)
 
     def _ao_clicar_novo_objeto(self, x: int, y: int) -> None:
         self.novo_objeto_menu.abrir(x, y)
