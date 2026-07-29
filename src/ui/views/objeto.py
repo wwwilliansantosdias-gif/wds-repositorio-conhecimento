@@ -71,10 +71,30 @@ class ObjetoView(ctk.CTkScrollableFrame):
 
         linha = 0
 
+        cabecalho_frame = ctk.CTkFrame(self, fg_color="transparent")
+        cabecalho_frame.grid(
+            row=linha, column=0, sticky="ew", padx=16, pady=(16, 0)
+        )
+        cabecalho_frame.grid_columnconfigure(0, weight=1)
+
         eyebrow = f"{detalhe.objeto.tipo}  ·  {detalhe.objeto.data_criacao[:10]}"
         ctk.CTkLabel(
-            self, text=eyebrow, font=ctk.CTkFont(size=11), text_color="gray60"
-        ).grid(row=linha, column=0, sticky="w", padx=16, pady=(16, 0))
+            cabecalho_frame,
+            text=eyebrow,
+            font=ctk.CTkFont(size=11),
+            text_color="gray60",
+        ).grid(row=0, column=0, sticky="w")
+
+        ctk.CTkButton(
+            cabecalho_frame,
+            text="Mover para Lixeira",
+            width=140,
+            height=24,
+            fg_color="gray40",
+            hover_color="gray30",
+            font=ctk.CTkFont(size=11),
+            command=lambda: self._excluir(objeto_id),
+        ).grid(row=0, column=1, sticky="e")
         linha += 1
 
         ctk.CTkLabel(
@@ -197,3 +217,9 @@ class ObjetoView(ctk.CTkScrollableFrame):
             return
         self._tag_controller.remover_tag(self._objeto_id_atual, tag_id)
         self.mostrar_objeto(self._objeto_id_atual)
+
+    def _excluir(self, objeto_id: int) -> None:
+        """Move o objeto para a lixeira e limpa o painel, ja que o
+        objeto em foco deixou de estar ativo."""
+        self._objeto_controller.excluir(objeto_id)
+        self.mostrar_espaco_reservado()

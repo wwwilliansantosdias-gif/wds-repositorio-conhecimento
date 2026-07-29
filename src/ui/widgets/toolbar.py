@@ -1,12 +1,16 @@
 """Widget da Barra Superior.
 
 Contem a identificacao do WDS, o campo de pesquisa (sempre visivel,
-ancora da navegacao), o botao Novo Objeto e o acesso a Lixeira,
-conforme docs/interface-grafica.md.
+ancora da navegacao), o botao Novo Objeto e o acesso a Biblioteca, a
+Lixeira, ao Backup e as Configuracoes, conforme
+docs/interface-grafica.md.
 
 Decisao (nao especificada anteriormente, resolvida aqui): o acesso a
-Lixeira e um pequeno botao na Barra Superior, ja que ela abre como
-janela separada e nao substitui o conteudo principal.
+Biblioteca, a Lixeira, ao Backup e as Configuracoes sao pequenos
+botoes na Barra Superior. Lixeira, Backup e Configuracoes abrem como
+janela separada; Biblioteca reaproveita a propria area de Resultados
+(mesmo componente de lista da Pesquisa), entao nao abre uma janela
+nova.
 """
 
 from __future__ import annotations
@@ -28,6 +32,9 @@ class Toolbar(ctk.CTkFrame):
         ao_pesquisar: Callable[[str], None],
         ao_clicar_novo_objeto: Callable[[int, int], None],
         ao_clicar_lixeira: Callable[[], None],
+        ao_clicar_backup: Callable[[], None],
+        ao_clicar_biblioteca: Callable[[], None],
+        ao_clicar_configuracoes: Callable[[], None],
         **kwargs: Any,
     ) -> None:
         super().__init__(master, corner_radius=0, **kwargs)
@@ -44,6 +51,17 @@ class Toolbar(ctk.CTkFrame):
         self.search_bar = SearchBar(self, ao_pesquisar=ao_pesquisar)
         self.search_bar.grid(row=0, column=1, sticky="ew", pady=12)
 
+        self.botao_biblioteca = ctk.CTkButton(
+            self,
+            text="Biblioteca",
+            width=100,
+            height=36,
+            fg_color="gray40",
+            hover_color="gray30",
+            command=ao_clicar_biblioteca,
+        )
+        self.botao_biblioteca.grid(row=0, column=2, padx=(16, 8), pady=12)
+
         self.botao_lixeira = ctk.CTkButton(
             self,
             text="Lixeira",
@@ -53,7 +71,29 @@ class Toolbar(ctk.CTkFrame):
             hover_color="gray30",
             command=ao_clicar_lixeira,
         )
-        self.botao_lixeira.grid(row=0, column=2, padx=(16, 8), pady=12)
+        self.botao_lixeira.grid(row=0, column=3, padx=(0, 8), pady=12)
+
+        self.botao_backup = ctk.CTkButton(
+            self,
+            text="Backup",
+            width=90,
+            height=36,
+            fg_color="gray40",
+            hover_color="gray30",
+            command=ao_clicar_backup,
+        )
+        self.botao_backup.grid(row=0, column=4, padx=(0, 8), pady=12)
+
+        self.botao_configuracoes = ctk.CTkButton(
+            self,
+            text="Configurações",
+            width=110,
+            height=36,
+            fg_color="gray40",
+            hover_color="gray30",
+            command=ao_clicar_configuracoes,
+        )
+        self.botao_configuracoes.grid(row=0, column=5, padx=(0, 8), pady=12)
 
         self.botao_novo_objeto = ctk.CTkButton(
             self,
@@ -61,7 +101,7 @@ class Toolbar(ctk.CTkFrame):
             width=140,
             height=36,
         )
-        self.botao_novo_objeto.grid(row=0, column=3, padx=(0, 16), pady=12)
+        self.botao_novo_objeto.grid(row=0, column=6, padx=(0, 16), pady=12)
         self.botao_novo_objeto.bind(
             "<Button-1>",
             lambda evento: ao_clicar_novo_objeto(evento.x_root, evento.y_root),

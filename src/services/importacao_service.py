@@ -11,6 +11,7 @@ import shutil
 from pathlib import Path
 
 from pypdf import PdfReader
+from docx import Document as DocumentoDocx
 
 from models import Objeto
 from services.acervo_service import AcervoService
@@ -18,6 +19,7 @@ from services.acervo_service import AcervoService
 
 DEFAULT_PASTA_PDFS = Path(__file__).resolve().parents[2] / "acervo" / "pdfs"
 DEFAULT_PASTA_NOTAS = Path(__file__).resolve().parents[2] / "acervo" / "notas"
+DEFAULT_PASTA_DOCUMENTOS = Path(__file__).resolve().parents[2] / "acervo" / "documentos"
 
 
 class DuplicataError(Exception):
@@ -37,10 +39,12 @@ class ImportacaoService:
         acervo_service: AcervoService,
         pasta_pdfs: Path | str = DEFAULT_PASTA_PDFS,
         pasta_notas: Path | str = DEFAULT_PASTA_NOTAS,
+        pasta_documentos: Path | str = DEFAULT_PASTA_DOCUMENTOS,
     ) -> None:
         self._acervo_service = acervo_service
         self._pasta_pdfs = Path(pasta_pdfs)
         self._pasta_notas = Path(pasta_notas)
+        self._pasta_documentos = Path(pasta_documentos)
 
     def calcular_hash(self, caminho_arquivo: str | Path) -> str:
         """Calcula o hash SHA-256 do conteudo de um arquivo fisico."""
@@ -135,6 +139,80 @@ class ImportacaoService:
             objeto.id,
             titulo_final,
             "PDF",
+            caminho=str(caminho_definitivo),
+        )
+
+    def extrair_texto_docx(self, caminho_arquivo: str | Path) -> str:
+        """Extrai o texto de todos os paragrafos de um documento .docx.
+
+        Paragrafos vazios (usados para espacamento) contribuem com
+        string vazia, sem interromper a extracao dos demais -- mesmo
+        comportamento de extrair_texto_pdf para paginas sem texto.
+        """
+        documento = DocumentoDocx(str(caminho_arquivo))
+        paragrafos = [paragrafo.text for paragrafo in documento.paragraphs]
+        return "\n".join(paragrafos).strip()
+
+    def importar_docx(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+        resumo: str | None = None,
+    ) -> Objeto:
+        """Importa um documento .docx para o Acervo.
+
+        Fluxo identico ao de importar_pdf: hash e deteccao de
+        duplicata, extracao de texto (usado como resumo pesquisavel,
+        a menos que um resumo explicito seja fornecido), cadastro via
+        AcervoService (indexacao semantica automatica), copia do
+        arquivo fisico para acervo/documentos/{id}.docx -- nome fisico
+        sempre pelo ID, nunca pelo titulo (AGENTS.md, secao "Arquivos
+        do Usuario") -- e atualizacao do objeto com o caminho
+        definitivo.
+
+        Usa o tipo "Documento" (nao "Docx"), pensado para acomodar
+        outros formatos de documento de texto que venham a ser
+        suportados futuramente sem multiplicar tipos por extensao
+        (docs/arquitetura.md, secao "Modelo de Dominio").
+
+        Se qualquer etapa apos o cadastro falhar, o objeto recem-criado
+        e removido em cascade, mesmo comportamento de importar_pdf.
+        """
+        caminho_original = Path(caminho_arquivo)
+        if not caminho_original.is_file():
+            raise FileNotFoundError(f"Arquivo nao encontrado: {caminho_original}")
+
+        hash_arquivo = self.calcular_hash(caminho_original)
+        self.verificar_duplicata(hash_arquivo)
+
+        resumo_final = (
+            resumo
+            if resumo is not None
+            else self.extrair_texto_docx(caminho_original)
+        )
+        titulo_final = titulo if titulo is not None else caminho_original.stem
+
+        objeto = self._acervo_service.cadastrar(
+            titulo_final,
+            "Documento",
+            resumo=resumo_final,
+            hash_arquivo=hash_arquivo,
+        )
+
+        try:
+            self._pasta_documentos.mkdir(parents=True, exist_ok=True)
+            caminho_definitivo = self._pasta_documentos / f"{objeto.id}.docx"
+            shutil.copy2(caminho_original, caminho_definitivo)
+        except Exception:
+            self._acervo_service.excluir(objeto.id)
+            self._acervo_service.excluir_definitivamente(objeto.id)
+            raise
+
+        return self._acervo_service.atualizar(
+            objeto.id,
+            titulo_final,
+            "Documento",
             caminho=str(caminho_definitivo),
         )
 

@@ -1,7 +1,7 @@
 """Controller do menu "Novo Objeto".
 
-Une as quatro formas de criacao ja suportadas pelos Services
-(importar_pdf, importar_markdown, cadastrar_link, criar_nota_manual)
+Une as formas de criacao ja suportadas pelos Services (importar_pdf,
+importar_markdown, importar_docx, cadastrar_link, criar_nota_manual)
 em uma unica interface para a view, traduzindo os diferentes tipos de
 excecao de cada caminho (DuplicataError, FileNotFoundError, ValueError,
 falhas de extracao de texto) em um resultado uniforme.
@@ -56,6 +56,30 @@ class NovoObjetoController:
             return ResultadoCriacao(
                 sucesso=False,
                 mensagem_erro=f"Nao foi possivel importar o PDF: {erro}",
+            )
+
+    def importar_docx(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+    ) -> ResultadoCriacao:
+        """Importa um documento .docx e converte falhas em um resultado uniforme."""
+        try:
+            objeto = self._importacao_service.importar_docx(
+                caminho_arquivo, titulo=titulo
+            )
+            return ResultadoCriacao(sucesso=True, objeto=objeto)
+        except DuplicataError as erro:
+            return ResultadoCriacao(sucesso=False, mensagem_erro=str(erro))
+        except FileNotFoundError:
+            return ResultadoCriacao(
+                sucesso=False, mensagem_erro="Arquivo nao encontrado."
+            )
+        except Exception as erro:
+            return ResultadoCriacao(
+                sucesso=False,
+                mensagem_erro=f"Nao foi possivel importar o documento: {erro}",
             )
 
     def importar_markdown(

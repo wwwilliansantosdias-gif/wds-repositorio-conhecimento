@@ -22,6 +22,8 @@ import customtkinter as ctk
 
 from persistence import Database
 from services.acervo_service import AcervoService
+from services.backup_service import BackupService
+from services.config_service import ConfigService
 from services.embedding_service import EmbeddingService
 from services.importacao_service import ImportacaoService
 from services.objeto_service import ObjetoService
@@ -29,6 +31,8 @@ from services.pesquisa_service import PesquisaService
 from services.relacao_service import RelacaoService
 from services.tag_service import TagService
 
+from controllers.backup_controller import BackupController
+from controllers.configuracoes_controller import ConfiguracoesController
 from controllers.editor_markdown_controller import EditorMarkdownController
 from controllers.lixeira_controller import LixeiraController
 from controllers.novo_objeto_controller import NovoObjetoController
@@ -36,9 +40,12 @@ from controllers.objeto_controller import ObjetoController
 from controllers.pesquisa_controller import PesquisaController
 from controllers.tag_controller import TagController
 
-from views.objeto import ObjetoView
+from views.objeto_view import ObjetoView
 from views.pesquisa import PesquisaView
 from views.lixeira import LixeiraWindow
+from views.editor_markdown import EditorMarkdownWindow
+from views.backup import BackupWindow
+from views.configuracoes import ConfiguracoesWindow
 from widgets.novo_objeto_menu import NovoObjetoMenu
 from widgets.toolbar import Toolbar
 
@@ -68,10 +75,12 @@ class MainWindow(ctk.CTk):
             self.objeto_service, self.embedding_service
         )
         self.importacao_service = ImportacaoService(self.acervo_service)
+        self.backup_service = BackupService()
+        self.config_service = ConfigService()
 
     def _montar_controllers(self) -> None:
         self.pesquisa_controller = PesquisaController(
-            self.pesquisa_service, self.embedding_service
+            self.pesquisa_service, self.embedding_service, self.acervo_service
         )
         self.tag_controller = TagController(self.tag_service, self.objeto_service)
         self.objeto_controller = ObjetoController(
@@ -85,11 +94,14 @@ class MainWindow(ctk.CTk):
             self.acervo_service
         )
         self.lixeira_controller = LixeiraController(self.acervo_service)
+        self.backup_controller = BackupController(self.backup_service)
+        self.configuracoes_controller = ConfiguracoesController(self.config_service)
 
         self.novo_objeto_menu = NovoObjetoMenu(
             self,
             self.novo_objeto_controller,
             ao_criar_objeto=self._ao_criar_objeto,
+            ao_criar_nota=self._ao_criar_nota,
         )
 
     def _montar_layout(self) -> None:
@@ -101,6 +113,9 @@ class MainWindow(ctk.CTk):
             ao_pesquisar=self._ao_pesquisar,
             ao_clicar_novo_objeto=self._ao_clicar_novo_objeto,
             ao_clicar_lixeira=self._ao_clicar_lixeira,
+            ao_clicar_backup=self._ao_clicar_backup,
+            ao_clicar_biblioteca=self._ao_clicar_biblioteca,
+            ao_clicar_configuracoes=self._ao_clicar_configuracoes,
         )
         self.toolbar.grid(row=0, column=0, sticky="ew")
 
@@ -145,6 +160,18 @@ class MainWindow(ctk.CTk):
     def _ao_clicar_lixeira(self) -> None:
         LixeiraWindow(self, self.lixeira_controller)
 
+    def _ao_clicar_backup(self) -> None:
+        BackupWindow(self, self.backup_controller)
+
+    def _ao_clicar_configuracoes(self) -> None:
+        ConfiguracoesWindow(self, self.configuracoes_controller)
+
+    def _ao_clicar_biblioteca(self) -> None:
+        """Reaproveita o painel de Resultados para mostrar todos os
+        objetos ativos do Acervo, sem termo de busca (docs/interface-
+        grafica.md, secao 'Biblioteca')."""
+        self.pesquisa_view.listar_todos()
+
     def _ao_criar_objeto(self, objeto_id: int) -> None:
         """Apos criar um objeto novo, mostra-o em Objeto em Foco.
 
@@ -153,6 +180,16 @@ class MainWindow(ctk.CTk):
         cadastro nao insere resultados fora desse fluxo.
         """
         self.objeto_view.mostrar_objeto(objeto_id)
+
+    def _ao_criar_nota(self, objeto_id: int) -> None:
+        """Apos criar uma nota em branco, abre direto o Editor Markdown
+        para o usuario digitar o conteudo."""
+        EditorMarkdownWindow(
+            self,
+            self.editor_markdown_controller,
+            objeto_id,
+            ao_salvar=self._ao_criar_objeto,
+        )
 
 
 def main() -> None:

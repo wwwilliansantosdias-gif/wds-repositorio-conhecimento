@@ -28,6 +28,10 @@ class LixeiraWindow(ctk.CTkToplevel):
         lixeira_controller: LixeiraController,
     ) -> None:
         super().__init__(master)
+        self.transient(master)
+        self.lift()
+        self.focus_force()
+        self.grab_set()
         self.title("Lixeira")
         self.geometry("520x600")
         self._controller = lixeira_controller

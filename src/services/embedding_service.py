@@ -14,7 +14,7 @@ from services.base import BaseService
 from services.objeto_service import ObjetoService
 
 
-DEFAULT_CHROMA_PATH = Path(__file__).resolve().parents[2] / "chroma_db"
+DEFAULT_CHROMA_PATH = Path(__file__).resolve().parents[2] / "vetores"
 COLLECTION_NAME = "objetos_conhecimento"
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 _CANDIDATE_MULTIPLIER = 3
@@ -32,6 +32,7 @@ class EmbeddingService(BaseService):
         chroma_path: Path | str = DEFAULT_CHROMA_PATH,
     ) -> None:
         super().__init__(database)
+        self.chroma_path = Path(chroma_path)
         self._model = _obter_modelo()
         self._client = chromadb.PersistentClient(path=str(chroma_path))
         self._collection: Collection = self._client.get_or_create_collection(

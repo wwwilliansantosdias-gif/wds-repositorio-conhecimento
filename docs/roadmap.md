@@ -142,6 +142,7 @@ Permitir a incorporação de conteúdo ao Acervo de Conhecimento.
 
 - Importação de PDFs
 - Importação de Markdown
+- Importação de Docx
 - Cadastro de links
 - Extração de texto
 - Detecção de duplicatas
@@ -161,7 +162,6 @@ Disponibilizar uma interface completa para utilização do sistema.
 
 ## Itens
 
-- Dashboard
 - Biblioteca
 - Pesquisa
 - Visualização dos Objetos
@@ -171,6 +171,9 @@ Disponibilizar uma interface completa para utilização do sistema.
 ## Critério de conclusão
 
 Todas as funcionalidades do MVP podem ser utilizadas pela interface.
+
+O Dashboard foi adiado para versão posterior e não integra o escopo do MVP
+v1.0.0.
 
 ---
 
@@ -243,5 +246,6 @@ As funcionalidades abaixo permanecem fora do escopo da versão 1.0 e somente pod
 - Extração automática de relacionamentos
 - Grafo de conhecimento
 - Integração com agentes externos
+- Dashboard
 
 Essas funcionalidades deverão reutilizar o modelo de Objeto de Conhecimento existente, preservando a arquitetura do sistema.

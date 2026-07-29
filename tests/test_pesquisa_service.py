@@ -114,6 +114,57 @@ class PesquisaServiceTests(unittest.TestCase):
 
         self.assertEqual([objeto.titulo for objeto in encontrados], ["Registro legado"])
 
+    # ---- caracteres especiais (correcao do bug do hifen e afins) ------
+
+    def test_buscar_texto_com_hifen_nao_lanca_excecao(self) -> None:
+        objeto = self.objeto_service.cadastrar(
+            "Loja de e-commerce", "Nota", resumo="vender produtos online"
+        )
+
+        encontrados = self.service.buscar_texto("e-commerce")
+
+        self.assertEqual(encontrados, [objeto])
+
+    def test_buscar_texto_com_aspas_nao_lanca_excecao(self) -> None:
+        self.objeto_service.cadastrar("Anotacao qualquer", "Nota")
+
+        encontrados = self.service.buscar_texto('"aspas soltas')
+
+        self.assertEqual(encontrados, [])
+
+    def test_buscar_texto_com_parenteses_nao_lanca_excecao(self) -> None:
+        objeto = self.objeto_service.cadastrar(
+            "Reflexao", "Nota", resumo="ideia (ainda em rascunho) sobre o tema"
+        )
+
+        encontrados = self.service.buscar_texto("(ainda")
+
+        self.assertEqual(encontrados, [objeto])
+
+    def test_buscar_texto_com_palavra_reservada_do_fts5_nao_lanca_excecao(self) -> None:
+        """Digitar AND, OR, NOT ou NEAR como parte natural da frase nao
+        pode ser interpretado como sintaxe de consulta."""
+        self.objeto_service.cadastrar("Anotacao qualquer", "Nota")
+
+        for termo in ("AND", "OR", "NOT", "NEAR", "modelo AND vendas"):
+            with self.subTest(termo=termo):
+                encontrados = self.service.buscar_texto(termo)
+                self.assertEqual(encontrados, [])
+
+    def test_buscar_texto_prefixo_com_asterisco_continua_funcionando(self) -> None:
+        objeto = self.objeto_service.cadastrar("Filosofia estoica", "Nota")
+
+        encontrados = self.service.buscar_texto("filosof*")
+
+        self.assertEqual(encontrados, [objeto])
+
+    def test_buscar_texto_prefixo_com_hifen_e_asterisco_juntos(self) -> None:
+        objeto = self.objeto_service.cadastrar("Auto-organizacao", "Nota")
+
+        encontrados = self.service.buscar_texto("auto-organiz*")
+
+        self.assertEqual(encontrados, [objeto])
+
 
 if __name__ == "__main__":
     unittest.main()

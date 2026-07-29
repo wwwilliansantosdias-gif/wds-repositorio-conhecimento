@@ -141,14 +141,6 @@ A pesquisa permanece sendo a âncora da navegação.
 
 # Componentes
 
-## Dashboard
-
-Tela inicial.
-
-Apresenta acesso rápido às funcionalidades.
-
----
-
 ## Biblioteca
 
 Apresenta todos os Objetos de Conhecimento.
@@ -230,6 +222,7 @@ Não fazem parte da Interface do MVP:
 - OCR
 - Transcrição
 - Dashboards analíticos
+- Dashboard (adiado para versão posterior ao MVP v1.0.0)
 
 ---
 

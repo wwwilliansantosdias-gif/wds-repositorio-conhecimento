@@ -20,6 +20,8 @@ from services.embedding_service import EmbeddingService
 from services.importacao_service import DuplicataError, ImportacaoService
 from services.objeto_service import ObjetoService
 
+from docx import Document as DocumentoDocx
+
 
 # PDF real (gerado com reportlab), contendo o texto:
 # "Ensaio sobre estoicismo" / "Reflexao sobre o pensamento filosofico de Epicteto."
@@ -46,10 +48,12 @@ class ImportacaoServiceTests(unittest.TestCase):
 
         self.pasta_pdfs = temporary_path / "acervo" / "pdfs"
         self.pasta_notas = temporary_path / "acervo" / "notas"
+        self.pasta_documentos = temporary_path / "acervo" / "documentos"
         self.importacao_service = ImportacaoService(
             self.acervo_service,
             pasta_pdfs=self.pasta_pdfs,
             pasta_notas=self.pasta_notas,
+            pasta_documentos=self.pasta_documentos,
         )
 
         self.pdf_path = temporary_path / "documento_original.pdf"
@@ -61,6 +65,14 @@ class ImportacaoServiceTests(unittest.TestCase):
             "Reflexao sobre o pensamento filosofico de Epicteto.",
             encoding="utf-8",
         )
+
+        self.docx_path = temporary_path / "relatorio_original.docx"
+        documento_docx = DocumentoDocx()
+        documento_docx.add_paragraph("Ensaio sobre estoicismo")
+        documento_docx.add_paragraph(
+            "Reflexao sobre o pensamento filosofico de Epicteto."
+        )
+        documento_docx.save(str(self.docx_path))
 
     def tearDown(self) -> None:
         del self.embedding_service
@@ -197,6 +209,74 @@ class ImportacaoServiceTests(unittest.TestCase):
 
         self.assertNotEqual(objeto_pdf.id, objeto_md.id)
         self.assertNotEqual(objeto_pdf.hash_arquivo, objeto_md.hash_arquivo)
+
+    def test_extrair_texto_docx_retorna_conteudo_real_do_documento(self) -> None:
+        texto = self.importacao_service.extrair_texto_docx(self.docx_path)
+
+        self.assertIn("Ensaio sobre estoicismo", texto)
+        self.assertIn("Epicteto", texto)
+
+    def test_importar_docx_cadastra_copia_e_indexa_o_objeto(self) -> None:
+        objeto = self.importacao_service.importar_docx(self.docx_path)
+
+        self.assertEqual(objeto.titulo, "relatorio_original")
+        self.assertEqual(objeto.tipo, "Documento")
+        self.assertIn("Ensaio sobre estoicismo", objeto.resumo)
+        self.assertIsNotNone(objeto.hash_arquivo)
+
+        caminho_copiado = self.pasta_documentos / f"{objeto.id}.docx"
+        self.assertTrue(caminho_copiado.is_file())
+        self.assertEqual(objeto.caminho, str(caminho_copiado))
+
+        encontrados = self.embedding_service.buscar_semantico(
+            "aceitacao estoica do sofrimento"
+        )
+        self.assertTrue(any(item.id == objeto.id for item, _ in encontrados))
+
+    def test_importar_docx_permanece_apos_reabrir_o_banco(self) -> None:
+        objeto = self.importacao_service.importar_docx(self.docx_path)
+
+        for _ in range(3):
+            banco_reaberto = Database(self.database.path)
+            banco_reaberto.initialize()
+            objetos_ativos = ObjetoService(banco_reaberto).listar_ativos()
+
+            self.assertEqual([item.id for item in objetos_ativos], [objeto.id])
+            self.assertEqual(objetos_ativos[0].tipo, "Documento")
+            self.assertEqual(objetos_ativos[0].caminho, objeto.caminho)
+            self.assertTrue(Path(objetos_ativos[0].caminho).is_file())
+
+    def test_importar_docx_usa_titulo_explicito_quando_fornecido(self) -> None:
+        objeto = self.importacao_service.importar_docx(
+            self.docx_path,
+            titulo="Meu titulo customizado",
+        )
+
+        self.assertEqual(objeto.titulo, "Meu titulo customizado")
+
+    def test_importar_docx_impede_duplicata(self) -> None:
+        self.importacao_service.importar_docx(self.docx_path)
+
+        with self.assertRaises(DuplicataError):
+            self.importacao_service.importar_docx(self.docx_path)
+
+    def test_importar_docx_arquivo_inexistente_leva_a_erro_claro(self) -> None:
+        with self.assertRaises(FileNotFoundError):
+            self.importacao_service.importar_docx("caminho/que/nao/existe.docx")
+
+    def test_importar_docx_pdf_e_markdown_nao_conflitam_como_duplicata(self) -> None:
+        objeto_pdf = self.importacao_service.importar_pdf(self.pdf_path)
+        objeto_md = self.importacao_service.importar_markdown(self.markdown_path)
+        objeto_docx = self.importacao_service.importar_docx(self.docx_path)
+
+        ids = {objeto_pdf.id, objeto_md.id, objeto_docx.id}
+        hashes = {
+            objeto_pdf.hash_arquivo,
+            objeto_md.hash_arquivo,
+            objeto_docx.hash_arquivo,
+        }
+        self.assertEqual(len(ids), 3)
+        self.assertEqual(len(hashes), 3)
 
     def test_cadastrar_link_persiste_e_indexa(self) -> None:
         objeto = self.importacao_service.cadastrar_link(

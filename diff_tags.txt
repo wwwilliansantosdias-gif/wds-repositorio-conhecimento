@@ -1,0 +1,194 @@
+diff --git a/src/services/pesquisa_service.py b/src/services/pesquisa_service.py
+index c2e5d43..aedbd61 100644
+--- a/src/services/pesquisa_service.py
++++ b/src/services/pesquisa_service.py
+@@ -10,24 +10,55 @@ class PesquisaService(BaseService):
+     """Recupera objetos ativos pelo \u00edndice textual FTS5."""
+ 
+     def buscar_texto(self, termo: str) -> list[Objeto]:
+-        """Busca t\u00edtulos e resumos com a sintaxe MATCH do FTS5.
++        """Busca t\u00edtulos, resumos e tags de objetos ativos.
+ 
+         O asterisco final \u00e9 aceito para consultas por prefixo, como
+-        ``filosof*``. A consulta \u00e9 executada exclusivamente no \u00edndice
+-        textual, e o filtro de objetos ativos \u00e9 aplicado no SQLite.
++        ``filosof*``. T\u00edtulos e resumos usam o \u00edndice FTS5; as tags
++        usam as associa\u00e7\u00f5es existentes no SQLite.
+         """
+         with self.database.connection() as connection:
+             rows = connection.execute(
+                 """
++                WITH resultados AS (
++                    SELECT
++                        objeto.id AS objeto_id,
++                        rank AS ordenacao,
++                        0 AS prioridade
++                    FROM tabela_objetos_fts
++                    JOIN tabela_objetos AS objeto
++                        ON objeto.id = tabela_objetos_fts.rowid
++                    WHERE tabela_objetos_fts MATCH ?
++                        AND objeto.status = 'ativo'
++
++                    UNION ALL
++
++                    SELECT
++                        objeto.id AS objeto_id,
++                        0 AS ordenacao,
++                        1 AS prioridade
++                    FROM tabela_tags AS tag
++                    JOIN tabela_objeto_tag AS objeto_tag
++                        ON objeto_tag.tag_id = tag.id
++                    JOIN tabela_objetos AS objeto
++                        ON objeto.id = objeto_tag.objeto_id
++                    WHERE tag.nome = ? COLLATE NOCASE
++                        AND objeto.status = 'ativo'
++                ),
++                objetos_encontrados AS (
++                    SELECT
++                        objeto_id,
++                        MIN(prioridade) AS prioridade,
++                        MIN(ordenacao) AS ordenacao
++                    FROM resultados
++                    GROUP BY objeto_id
++                )
+                 SELECT objeto.*
+-                FROM tabela_objetos_fts
++                FROM objetos_encontrados
+                 JOIN tabela_objetos AS objeto
+-                    ON objeto.id = tabela_objetos_fts.rowid
+-                WHERE tabela_objetos_fts MATCH ?
+-                    AND objeto.status = 'ativo'
+-                ORDER BY rank
++                    ON objeto.id = objetos_encontrados.objeto_id
++                ORDER BY objetos_encontrados.prioridade, objetos_encontrados.ordenacao
+                 """,
+-                (termo,),
++                (termo, termo),
+             ).fetchall()
+ 
+         return [Objeto(**dict(row)) for row in rows]
+diff --git a/src/ui/main_window.py b/src/ui/main_window.py
+index d265e4d..cc4b08e 100644
+--- a/src/ui/main_window.py
++++ b/src/ui/main_window.py
+@@ -123,6 +123,7 @@ class MainWindow(ctk.CTk):
+             self.objeto_controller,
+             self.tag_controller,
+             ao_selecionar_objeto=self._ao_selecionar_objeto,
++            ao_selecionar_tag=self._ao_selecionar_tag,
+         )
+         self.objeto_view.grid(row=0, column=1, sticky="nsew", padx=(6, 12), pady=12)
+ 
+@@ -134,6 +135,10 @@ class MainWindow(ctk.CTk):
+         da pesquisa a esquerda permanecem intactos."""
+         self.objeto_view.mostrar_objeto(objeto_id)
+ 
++    def _ao_selecionar_tag(self, nome_tag: str) -> None:
++        """Atualiza os Resultados usando a pesquisa textual da tag."""
++        self.pesquisa_view.pesquisar(nome_tag)
++
+     def _ao_clicar_novo_objeto(self, x: int, y: int) -> None:
+         self.novo_objeto_menu.abrir(x, y)
+ 
+diff --git a/src/ui/views/objeto.py b/src/ui/views/objeto.py
+index 12e3315..8dfaec3 100644
+--- a/src/ui/views/objeto.py
++++ b/src/ui/views/objeto.py
+@@ -32,12 +32,14 @@ class ObjetoView(ctk.CTkScrollableFrame):
+         objeto_controller: ObjetoController,
+         tag_controller: TagController,
+         ao_selecionar_objeto: Callable[[int], None],
++        ao_selecionar_tag: Callable[[str], None],
+         **kwargs: Any,
+     ) -> None:
+         super().__init__(master, fg_color="transparent", **kwargs)
+         self._objeto_controller = objeto_controller
+         self._tag_controller = tag_controller
+         self._ao_selecionar_objeto = ao_selecionar_objeto
++        self._ao_selecionar_tag = ao_selecionar_tag
+         self._objeto_id_atual: int | None = None
+ 
+         self.grid_columnconfigure(0, weight=1)
+@@ -167,7 +169,12 @@ class ObjetoView(ctk.CTkScrollableFrame):
+     ) -> None:
+         coluna = 0
+         for tag in tags:
+-            chip = TagChip(container, tag, ao_remover=self._remover_tag)
++            chip = TagChip(
++                container,
++                tag,
++                ao_remover=self._remover_tag,
++                ao_selecionar=self._ao_selecionar_tag,
++            )
+             chip.grid(row=0, column=coluna, padx=(0, 6))
+             coluna += 1
+ 
+diff --git a/src/ui/widgets/tag_chip.py b/src/ui/widgets/tag_chip.py
+index 8113a9f..0f29c85 100644
+--- a/src/ui/widgets/tag_chip.py
++++ b/src/ui/widgets/tag_chip.py
+@@ -1,7 +1,8 @@
+ """Widget de uma tag exibida como "chip" (pilula arredondada).
+ 
+ Pode ser somente leitura (usado na lista de Resultados) ou removivel
+-(usado no painel de Objeto em Foco, com um botao "x" ao lado).
++(usado no painel de Objeto em Foco, com um botao "x" ao lado). Tambem
++pode notificar a selecao da tag para iniciar uma pesquisa.
+ """
+ 
+ from __future__ import annotations
+@@ -22,18 +23,23 @@ class TagChip(ctk.CTkFrame):
+         master: Any,
+         tag: Tag,
+         ao_remover: Callable[[int], None] | None = None,
++        ao_selecionar: Callable[[str], None] | None = None,
+         **kwargs: Any,
+     ) -> None:
+         super().__init__(
+             master, corner_radius=12, fg_color=("#DCEEEC", "#1F3B38"), **kwargs
+         )
+ 
+-        ctk.CTkLabel(
++        rotulo = ctk.CTkLabel(
+             self,
+             text=f"#{tag.nome}",
+             font=ctk.CTkFont(size=11),
+             text_color="#4FA9A0",
+-        ).grid(row=0, column=0, padx=(8, 4 if ao_remover else 8), pady=2)
++        )
++        rotulo.grid(row=0, column=0, padx=(8, 4 if ao_remover else 8), pady=2)
++
++        if ao_selecionar is not None:
++            rotulo.bind("<Button-1>", lambda _evento: ao_selecionar(tag.nome))
+ 
+         if ao_remover is not None:
+             ctk.CTkButton(
+diff --git a/tests/test_pesquisa_service.py b/tests/test_pesquisa_service.py
+index 81d146f..1b825c1 100644
+--- a/tests/test_pesquisa_service.py
++++ b/tests/test_pesquisa_service.py
+@@ -17,6 +17,7 @@ from persistence import Database
+ from persistence.database import INITIAL_SCHEMA_STATEMENTS
+ from services.objeto_service import ObjetoService
+ from services.pesquisa_service import PesquisaService
++from services.tag_service import TagService
+ 
+ 
+ class PesquisaServiceTests(unittest.TestCase):
+@@ -68,6 +69,16 @@ class PesquisaServiceTests(unittest.TestCase):
+ 
+         self.assertEqual([encontrado.id for encontrado in encontrados], [objeto.id])
+ 
++    def test_buscar_texto_encontra_objeto_por_tag_associada(self) -> None:
++        objeto = self.objeto_service.cadastrar("Anotacao", "Nota")
++        tag_service = TagService(self.service.database)
++        tag = tag_service.criar("filosofia")
++        tag_service.associar(objeto.id, tag.id)
++
++        encontrados = self.service.buscar_texto("filosofia")
++
++        self.assertEqual(encontrados, [objeto])
++
+     def test_migration_indexa_objetos_existentes(self) -> None:
+         legacy_directory = TemporaryDirectory()
+         self.addCleanup(legacy_directory.cleanup)

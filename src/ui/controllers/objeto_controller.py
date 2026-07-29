@@ -84,6 +84,18 @@ class ObjetoController:
             sugestoes=sugestoes,
         )
 
+    def excluir(self, objeto_id: int) -> Objeto:
+        """Move o objeto para a lixeira (exclusao logica).
+
+        Delega diretamente ao AcervoService, que ja garante que o
+        embedding semantico do objeto permanece indexado ate a
+        exclusao definitiva -- a View so precisa saber que a operacao
+        foi delegada, nao como ela funciona por dentro. Levanta
+        LookupError se objeto_id nao existir; a View decide como
+        apresentar esse caso.
+        """
+        return self._acervo_service.excluir(objeto_id)
+
     def _resolver_objetos_relacionados(
         self,
         objeto_id: int,

@@ -15,6 +15,7 @@ for caminho in (SOURCE_DIRECTORY, UI_DIRECTORY):
         sys.path.insert(0, str(caminho))
 
 from persistence import Database
+from services.acervo_service import AcervoService
 from services.embedding_service import EmbeddingService
 from services.objeto_service import ObjetoService
 from services.pesquisa_service import PesquisaService
@@ -41,8 +42,10 @@ class PesquisaControllerTests(unittest.TestCase):
             chroma_path=temporary_path / "chroma_db",
         )
 
+        self.acervo_service = AcervoService(self.objeto_service, self.embedding_service)
+
         self.controller = PesquisaController(
-            self.pesquisa_service, self.embedding_service
+            self.pesquisa_service, self.embedding_service, self.acervo_service
         )
 
     def tearDown(self) -> None:
@@ -102,6 +105,39 @@ class PesquisaControllerTests(unittest.TestCase):
         ids_em_ordem = [r.objeto.id for r in resultados]
         self.assertEqual(ids_em_ordem[0], tambem_semantico.id)
         self.assertIn(apenas_textual.id, ids_em_ordem)
+
+    def test_listar_todos_retorna_vazio_quando_acervo_esta_vazio(self) -> None:
+        self.assertEqual(self.controller.listar_todos(), [])
+
+    def test_listar_todos_traz_todos_os_objetos_ativos_sem_score(self) -> None:
+        primeiro = self.objeto_service.cadastrar("Primeiro objeto", "Nota")
+        segundo = self.objeto_service.cadastrar("Segundo objeto", "Nota")
+
+        resultados = self.controller.listar_todos()
+
+        ids = {r.objeto.id for r in resultados}
+        self.assertEqual(ids, {primeiro.id, segundo.id})
+        self.assertTrue(all(r.score is None for r in resultados))
+
+    def test_listar_todos_nao_traz_objeto_na_lixeira(self) -> None:
+        ativo = self.objeto_service.cadastrar("Fico ativo", "Nota")
+        excluido = self.objeto_service.cadastrar("Vou para a lixeira", "Nota")
+        self.objeto_service.excluir(excluido.id)
+
+        resultados = self.controller.listar_todos()
+
+        ids = {r.objeto.id for r in resultados}
+        self.assertIn(ativo.id, ids)
+        self.assertNotIn(excluido.id, ids)
+
+    def test_listar_todos_mostra_o_mais_recente_primeiro(self) -> None:
+        mais_antigo = self.objeto_service.cadastrar("Criado primeiro", "Nota")
+        mais_recente = self.objeto_service.cadastrar("Criado depois", "Nota")
+
+        resultados = self.controller.listar_todos()
+
+        self.assertEqual(resultados[0].objeto.id, mais_recente.id)
+        self.assertEqual(resultados[1].objeto.id, mais_antigo.id)
 
 
 if __name__ == "__main__":

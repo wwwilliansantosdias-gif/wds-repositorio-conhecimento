@@ -1,111 +1,50 @@
-# WDS – Acervo de Conhecimento
+# WDS â€” Acervo de Conhecimento
 
-O WDS (Willian Dias Santos) – Acervo de Conhecimento é uma aplicação desktop desenvolvida em Python para preservação, organização, relacionamento e recuperação de conhecimento pessoal.
+WDS Ã© uma aplicaÃ§Ã£o desktop local para preservar, organizar, relacionar e
+recuperar conhecimento pessoal. Todo conteÃºdo Ã© registrado como um Objeto de
+Conhecimento, independentemente da mÃ­dia.
 
-Seu objetivo é permitir que cada usuário construa um **Acervo de Conhecimento** ao longo da vida, reunindo diferentes tipos de conteúdo em um único ambiente, independentemente do formato da informação.
+## VersÃ£o
 
----
+VersÃ£o em preparaÃ§Ã£o: **v1.0.0 (MVP)**.
 
-# Objetivo
+## Funcionalidades disponÃ­veis
 
-O WDS organiza conhecimento, não apenas arquivos.
+- cadastro, atualizaÃ§Ã£o, exclusÃ£o lÃ³gica, restauraÃ§Ã£o e exclusÃ£o definitiva
+  de Objetos de Conhecimento;
+- tags e relacionamentos;
+- lixeira;
+- pesquisa textual com SQLite FTS5 e pesquisa semÃ¢ntica com ChromaDB;
+- importaÃ§Ã£o de PDF, Markdown e DOCX, alÃ©m de cadastro de links;
+- editor de notas Markdown;
+- biblioteca, configuraÃ§Ãµes, backup, restauraÃ§Ã£o e validaÃ§Ã£o de integridade.
 
-Cada conteúdo armazenado é tratado como um **Objeto de Conhecimento**, podendo representar documentos, imagens, áudios, vídeos, anotações, códigos, fotografias ou qualquer outra mídia que possua significado para o usuário.
+O Dashboard nÃ£o integra o MVP v1.0.0. Ele permanece planejado para uma versÃ£o
+posterior.
 
-O sistema fornece mecanismos para:
+## Requisitos para executar pelo cÃ³digo-fonte
 
-- preservar conhecimento;
-- organizar objetos;
-- relacionar informações;
-- recuperar conteúdo rapidamente, por palavra-chave ou por significado;
-- permitir evolução contínua do acervo.
+- Python 3.14;
+- dependÃªncias listadas em `requirements.txt`.
 
-O significado de cada objeto é definido exclusivamente pelo usuário.
+InstalaÃ§Ã£o:
 
----
-
-# Princípios
-
-- O conhecimento é independente da mídia.
-- O usuário define o que possui valor para seu acervo.
-- O armazenamento físico é separado da organização lógica.
-- Objetos podem evoluir continuamente por meio do enriquecimento de metadados.
-- O sistema pode sugerir relações automaticamente (por similaridade semântica), mas nunca substitui as decisões do usuário.
-
----
-
-# Estado Atual do Projeto
-
-- Persistência em SQLite (com integridade referencial via chaves estrangeiras)
-- Gerenciamento completo de Objetos de Conhecimento (cadastro, atualização, exclusão lógica e definitiva, lixeira)
-- Gerenciamento de Tags e Relacionamentos entre objetos
-- Pesquisa textual (SQLite FTS5), com suporte a acentuação e prefixo
-- Pesquisa semântica (ChromaDB + sentence-transformers), com sincronização automática ao cadastrar, atualizar ou excluir objetos
-- Detecção de duplicatas por hash de arquivo (fundação da Fase de Importação)
-
-Em desenvolvimento:
-
-- Importação de PDFs, Markdown e links, com extração automática de texto
-- Interface gráfica (CustomTkinter)
-- Backup e recuperação
-
-Consulte `docs/roadmap.md` e `docs/docs/issues.md` para o detalhamento completo de cada fase e o progresso atualizado.
-
----
-
-# Tecnologias
-
-- Python
-- CustomTkinter
-- SQLite (com FTS5)
-- ChromaDB
-- sentence-transformers (modelo multilíngue)
-- Arquitetura em camadas
-- Testes automatizados com unittest
-
----
-
-# Estrutura do Projeto
-
-```
-docs/
-src/
-tests/
-acervo/
-backups/
-vetores/
-
-app.py
-README.md
-AGENTS.md
-pyproject.toml
+```powershell
+python -m pip install -r requirements.txt
+python app.py
 ```
 
----
+## Desenvolvimento e validaÃ§Ã£o
 
-# Documentação
+```powershell
+python -m unittest discover -s tests -v
+python -m compileall -q app.py src
+python app.py --check
+```
 
-Toda a documentação arquitetural está disponível na pasta `docs`.
+## DocumentaÃ§Ã£o
 
-O projeto é desenvolvido de forma incremental, seguindo rigorosamente:
-
-- Arquitetura
-- Roadmap
-- AGENTS.md
-- Decisões arquiteturais
-
----
-
-# Estado do Projeto
-
-O desenvolvimento ocorre por fases previamente definidas.
-
-Cada fase possui escopo próprio e somente é implementada após validação da fase anterior.
-
-Essa abordagem garante estabilidade da arquitetura e reduz retrabalho durante a evolução do sistema.
-
----
-
-# Licença
-
-Projeto em desenvolvimento.
+- `AGENTS.md` â€” regras de desenvolvimento;
+- `docs/arquitetura.md` â€” arquitetura oficial;
+- `docs/roadmap.md` â€” sequÃªncia oficial de desenvolvimento;
+- `docs/docs/issues.md` â€” histÃ³rico e estado das issues.

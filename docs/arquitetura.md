@@ -92,22 +92,39 @@ Os arquivos nunca são organizados por assunto ou categoria.
 O nome físico utiliza sempre o identificador do objeto.
 
 ```
-Projeto/
+wds-repositorio-conhecimento/
 
+├── AGENTS.md
 ├── app.py
 ├── banco.db
 ├── config.json
-│
+├── pyproject.toml
+├── README.md
+├── sessao.py
 ├── acervo/
 │   ├── documentos/
 │   ├── imagens/
-│   ├── audios/
-│   ├── videos/
-│   └── outros/
-│
-├── vetores/
-│
-└── backups/
+│   ├── links/
+│   ├── notas/
+│   └── pdfs/
+├── backups/
+├── chroma_db/
+├── docs/
+│   ├── arquitetura.md
+│   ├── interface-grafica.md
+│   ├── roadmap.md
+│   └── docs/
+│       └── issues.md
+├── src/
+│   ├── models/
+│   ├── persistence/
+│   ├── services/
+│   └── ui/
+│       ├── controllers/
+│       ├── views/
+│       └── widgets/
+├── tests/
+└── vetores/
 ```
 
 Caso novos tipos de mídia sejam suportados futuramente, a arquitetura permanece inalterada.
@@ -122,7 +139,6 @@ Responsável exclusivamente pela interação com o usuário.
 
 Exemplos:
 
-- Dashboard
 - Pesquisa
 - Biblioteca
 - Visualização dos Objetos
@@ -348,5 +364,6 @@ As funcionalidades abaixo permanecem planejadas para versões futuras e não faz
 - extração automática de relacionamentos;
 - grafo de conhecimento;
 - integração com outros agentes.
+- Dashboard.
 
 Esses recursos somente poderão ser incorporados após validação técnica e atualização desta arquitetura.
