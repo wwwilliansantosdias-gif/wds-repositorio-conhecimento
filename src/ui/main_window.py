@@ -139,6 +139,7 @@ class MainWindow(ctk.CTk):
             self.tag_controller,
             ao_selecionar_objeto=self._ao_selecionar_objeto,
             ao_selecionar_tag=self._ao_selecionar_tag,
+            ao_editar_objeto=self._ao_editar_objeto,
         )
         self.objeto_view.grid(row=0, column=1, sticky="nsew", padx=(6, 12), pady=12)
 
@@ -184,6 +185,15 @@ class MainWindow(ctk.CTk):
     def _ao_criar_nota(self, objeto_id: int) -> None:
         """Apos criar uma nota em branco, abre direto o Editor Markdown
         para o usuario digitar o conteudo."""
+        EditorMarkdownWindow(
+            self,
+            self.editor_markdown_controller,
+            objeto_id,
+            ao_salvar=self._ao_criar_objeto,
+        )
+
+    def _ao_editar_objeto(self, objeto_id: int) -> None:
+        """Abre o Editor Markdown para a Nota ou Markdown em foco."""
         EditorMarkdownWindow(
             self,
             self.editor_markdown_controller,

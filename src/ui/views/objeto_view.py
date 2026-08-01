@@ -12,10 +12,14 @@ intactos (docs/interface-grafica.md).
 from __future__ import annotations
 
 from collections.abc import Callable
+import os
 from typing import Any
+from tkinter import messagebox
+import webbrowser
 
 import customtkinter as ctk
 
+from controllers.editor_markdown_controller import TIPOS_EDITAVEIS
 from controllers.objeto_controller import ObjetoController
 from controllers.tag_controller import TagController
 from models import Objeto, Tag
@@ -33,6 +37,7 @@ class ObjetoView(ctk.CTkScrollableFrame):
         tag_controller: TagController,
         ao_selecionar_objeto: Callable[[int], None],
         ao_selecionar_tag: Callable[[str], None],
+        ao_editar_objeto: Callable[[int], None],
         **kwargs: Any,
     ) -> None:
         super().__init__(master, fg_color="transparent", **kwargs)
@@ -40,6 +45,7 @@ class ObjetoView(ctk.CTkScrollableFrame):
         self._tag_controller = tag_controller
         self._ao_selecionar_objeto = ao_selecionar_objeto
         self._ao_selecionar_tag = ao_selecionar_tag
+        self._ao_editar_objeto = ao_editar_objeto
         self._objeto_id_atual: int | None = None
 
         self.grid_columnconfigure(0, weight=1)
@@ -85,6 +91,29 @@ class ObjetoView(ctk.CTkScrollableFrame):
             text_color="gray60",
         ).grid(row=0, column=0, sticky="w")
 
+        coluna_acao = 1
+        if detalhe.objeto.tipo in TIPOS_EDITAVEIS:
+            ctk.CTkButton(
+                cabecalho_frame,
+                text="Editar",
+                width=80,
+                height=24,
+                font=ctk.CTkFont(size=11),
+                command=lambda: self._ao_editar_objeto(objeto_id),
+            ).grid(row=0, column=coluna_acao, sticky="e", padx=(0, 8))
+            coluna_acao += 1
+
+        if detalhe.objeto.tipo != "Nota":
+            ctk.CTkButton(
+                cabecalho_frame,
+                text="Abrir Original",
+                width=120,
+                height=24,
+                font=ctk.CTkFont(size=11),
+                command=lambda: self._abrir_original(detalhe.objeto),
+            ).grid(row=0, column=coluna_acao, sticky="e", padx=(0, 8))
+            coluna_acao += 1
+
         ctk.CTkButton(
             cabecalho_frame,
             text="Mover para Lixeira",
@@ -94,7 +123,7 @@ class ObjetoView(ctk.CTkScrollableFrame):
             hover_color="gray30",
             font=ctk.CTkFont(size=11),
             command=lambda: self._excluir(objeto_id),
-        ).grid(row=0, column=1, sticky="e")
+        ).grid(row=0, column=coluna_acao, sticky="e")
         linha += 1
 
         ctk.CTkLabel(
@@ -223,3 +252,15 @@ class ObjetoView(ctk.CTkScrollableFrame):
         objeto em foco deixou de estar ativo."""
         self._objeto_controller.excluir(objeto_id)
         self.mostrar_espaco_reservado()
+
+    @staticmethod
+    def _abrir_original(objeto: Objeto) -> None:
+        """Abre o arquivo ou link associado ao objeto no sistema."""
+        try:
+            if objeto.tipo == "Link":
+                webbrowser.open(objeto.caminho)
+                return
+
+            os.startfile(objeto.caminho)
+        except OSError as erro:
+            messagebox.showerror("Não foi possível abrir o original", str(erro))
