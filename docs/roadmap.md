@@ -167,6 +167,7 @@ Disponibilizar uma interface completa para utilização do sistema.
 - Visualização dos Objetos
 - Editor Markdown
 - Configurações
+- Backup
 
 ## Critério de conclusão
 
@@ -211,7 +212,7 @@ Garantir a qualidade do sistema antes da primeira versão.
 
 ## Critério de conclusão
 
-Todos os testes são aprovados.
+Todos os testes são aprovados (162 testes na validação final do 1.0).
 
 ---
 
@@ -224,13 +225,24 @@ Preparar a primeira versão pública do sistema.
 ## Itens
 
 - Revisão da documentação
-- Ajustes finais
-- Empacotamento
-- Geração do instalador
+- Ajustes finais (auditoria de integração entre Toolbar, MainWindow e
+  Controllers -- ver docs/docs/issues.md, Issue 32)
+- Lançador leve sem terminal (`Abrir WDS.bat` + atalho na Área de
+  Trabalho)
 
 ## Critério de conclusão
 
 Versão 1.0 pronta para distribuição.
+
+**Decisão registrada**: um instalador formal (`.exe`, via PyInstaller)
+foi tentado e abandonado -- `chromadb` e `sentence-transformers` têm
+incompatibilidades conhecidas com esse tipo de empacotador. O critério
+de conclusão desta fase foi atendido com um lançador leve (`pyw`, sem
+janela de terminal) em vez de um instalador. Reavaliar empacotamento
+formal apenas se houver necessidade real de distribuir o WDS para
+outra máquina que não a do autor.
+
+Versão 1.0 taggeada como `v1.0.0` e publicada no repositório privado.
 
 ---
 
@@ -249,3 +261,10 @@ As funcionalidades abaixo permanecem fora do escopo da versão 1.0 e somente pod
 - Dashboard
 
 Essas funcionalidades deverão reutilizar o modelo de Objeto de Conhecimento existente, preservando a arquitetura do sistema.
+
+O escopo já definido para o incremento 1.1 (planilhas, imagens, painel
+fixo de tags, busca semântica por tags, trecho de contexto na busca,
+acesso ao arquivo original) está registrado separadamente em
+`docs/wds-1.1-planejamento.md`, e não neste Roadmap, por ainda não ter
+sido formalizado em Fases/Issues no mesmo padrão dos incrementos
+anteriores.

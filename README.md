@@ -1,50 +1,61 @@
-# WDS â€” Acervo de Conhecimento
+# WDS — Acervo de Conhecimento
 
-WDS Ã© uma aplicaÃ§Ã£o desktop local para preservar, organizar, relacionar e
-recuperar conhecimento pessoal. Todo conteÃºdo Ã© registrado como um Objeto de
-Conhecimento, independentemente da mÃ­dia.
+WDS é uma aplicação desktop local para preservar, organizar, relacionar e
+recuperar conhecimento pessoal. Todo conteúdo é registrado como um Objeto de
+Conhecimento, independentemente da mídia.
 
-## VersÃ£o
+## Versão
 
-VersÃ£o em preparaÃ§Ã£o: **v1.0.0 (MVP)**.
+**v1.0.0** — lançada.
 
-## Funcionalidades disponÃ­veis
+## Funcionalidades disponíveis
 
-- cadastro, atualizaÃ§Ã£o, exclusÃ£o lÃ³gica, restauraÃ§Ã£o e exclusÃ£o definitiva
+- cadastro, atualização, exclusão lógica, restauração e exclusão definitiva
   de Objetos de Conhecimento;
 - tags e relacionamentos;
 - lixeira;
-- pesquisa textual com SQLite FTS5 e pesquisa semÃ¢ntica com ChromaDB;
-- importaÃ§Ã£o de PDF, Markdown e DOCX, alÃ©m de cadastro de links;
+- pesquisa textual com SQLite FTS5 e pesquisa semântica com ChromaDB;
+- importação de PDF, Markdown e DOCX, além de cadastro de links;
 - editor de notas Markdown;
-- biblioteca, configuraÃ§Ãµes, backup, restauraÃ§Ã£o e validaÃ§Ã£o de integridade.
+- biblioteca, configurações, backup, restauração e validação de integridade.
 
-O Dashboard nÃ£o integra o MVP v1.0.0. Ele permanece planejado para uma versÃ£o
-posterior.
+O Dashboard não integra o MVP v1.0.0. Ele permanece planejado para uma versão
+posterior (ver `docs/wds-1.1-planejamento.md` para o escopo já definido do
+próximo incremento).
 
-## Requisitos para executar pelo cÃ³digo-fonte
+## Requisitos para executar pelo código-fonte
 
 - Python 3.14;
-- dependÃªncias listadas em `requirements.txt`.
+- dependências listadas em `requirements.txt`.
 
-InstalaÃ§Ã£o:
+Instalação:
 
 ```powershell
 python -m pip install -r requirements.txt
 python app.py
 ```
 
-## Desenvolvimento e validaÃ§Ã£o
+## Abrir sem usar o terminal
+
+O arquivo `Abrir WDS.bat`, na raiz do projeto, inicia o programa via `pyw`
+(sem abrir janela de terminal). Para um ícone clicável na Área de Trabalho:
+clique com o botão direito em `Abrir WDS.bat` → "Enviar para" → "Área de
+trabalho (criar atalho)".
+
+Não há instalador formal (`.exe`) para esta versão -- ver `docs/docs/issues.md`,
+Issue 32, para o motivo dessa decisão.
+
+## Desenvolvimento e validação
 
 ```powershell
 python -m unittest discover -s tests -v
 python -m compileall -q app.py src
-python app.py --check
 ```
 
-## DocumentaÃ§Ã£o
+## Documentação
 
-- `AGENTS.md` â€” regras de desenvolvimento;
-- `docs/arquitetura.md` â€” arquitetura oficial;
-- `docs/roadmap.md` â€” sequÃªncia oficial de desenvolvimento;
-- `docs/docs/issues.md` â€” histÃ³rico e estado das issues.
+- `AGENTS.md` — regras de desenvolvimento;
+- `docs/arquitetura.md` — arquitetura oficial;
+- `docs/roadmap.md` — sequência oficial de desenvolvimento;
+- `docs/docs/issues.md` — histórico e estado das issues;
+- `docs/wds-1.1-planejamento.md` — escopo definido do próximo incremento.
