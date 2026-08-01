@@ -8,6 +8,7 @@ dist/
 build/
 *.egg-info/
 banco.db
+chroma_db/
 
 # Conteudo pessoal importado: protegido, mas a estrutura de pastas
 # permanece rastreada via os arquivos .gitkeep.
@@ -22,10 +23,10 @@ acervo/links/*
 acervo/documentos/*
 !acervo/documentos/.gitkeep
 
-# Indice semantico (ChromaDB) -- dados derivados, nao versionados.
+# Indice semantico (ChromaDB) e backups: dados pessoais gerados
+# localmente, nunca versionados. Estrutura de pastas mantida via
+# .gitkeep, mesmo padrao ja usado em acervo/.
 vetores/*
 !vetores/.gitkeep
-
-# Backups contem uma copia integral do acervo pessoal: nunca versionar.
 backups/*
 !backups/.gitkeep
