@@ -71,8 +71,9 @@ class PesquisaControllerTests(unittest.TestCase):
         self.assertEqual(len(resultados), 1)
         self.assertEqual(resultados[0].objeto.id, objeto.id)
         self.assertIsNone(resultados[0].score)
+        self.assertIn("filosofia", resultados[0].trecho)
 
-    def test_objeto_encontrado_pelos_dois_mecanismos_aparece_uma_vez_com_score(
+    def test_objeto_encontrado_pelos_dois_mecanismos_aparece_uma_vez_como_textual(
         self,
     ) -> None:
         objeto = self.objeto_service.cadastrar(
@@ -87,14 +88,32 @@ class PesquisaControllerTests(unittest.TestCase):
         ids = [r.objeto.id for r in resultados]
         self.assertEqual(ids.count(objeto.id), 1, "objeto nao pode duplicar na lista")
         resultado = next(r for r in resultados if r.objeto.id == objeto.id)
-        self.assertIsNotNone(resultado.score)
+        self.assertIsNone(resultado.score)
+        self.assertIsNotNone(resultado.trecho)
+        self.assertIn("estoicismo", resultado.trecho)
 
-    def test_resultados_semanticos_vem_antes_dos_apenas_textuais(self) -> None:
+    def test_resultado_semantico_com_resumo_nao_tem_contexto(self) -> None:
+        objeto = self.objeto_service.cadastrar(
+            "Filosofia classica",
+            "Nota",
+            resumo="Disciplina e virtude no cotidiano.",
+        )
+        self.embedding_service.indexar_objeto(
+            objeto.id, objeto.titulo, objeto.resumo
+        )
+
+        resultados = self.controller.pesquisar("estoicismo")
+
+        resultado = next(r for r in resultados if r.objeto.id == objeto.id)
+        self.assertIsNotNone(resultado.score)
+        self.assertIsNone(resultado.trecho)
+
+    def test_resultados_textuais_vem_antes_dos_semanticos(self) -> None:
         apenas_textual = self.objeto_service.cadastrar(
             "Nota comum", "Nota", resumo="tema comum aqui"
         )
         tambem_semantico = self.objeto_service.cadastrar(
-            "Outra nota", "Nota", resumo="tema comum tambem"
+            "Outra nota", "Nota", resumo="assunto diferente"
         )
         self.embedding_service.indexar_objeto(
             tambem_semantico.id, tambem_semantico.titulo, tambem_semantico.resumo
@@ -103,8 +122,8 @@ class PesquisaControllerTests(unittest.TestCase):
         resultados = self.controller.pesquisar("tema comum")
 
         ids_em_ordem = [r.objeto.id for r in resultados]
-        self.assertEqual(ids_em_ordem[0], tambem_semantico.id)
-        self.assertIn(apenas_textual.id, ids_em_ordem)
+        self.assertEqual(ids_em_ordem[0], apenas_textual.id)
+        self.assertEqual(ids_em_ordem[1], tambem_semantico.id)
 
     def test_listar_todos_retorna_vazio_quando_acervo_esta_vazio(self) -> None:
         self.assertEqual(self.controller.listar_todos(), [])

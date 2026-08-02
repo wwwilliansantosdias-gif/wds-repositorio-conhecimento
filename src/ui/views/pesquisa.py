@@ -107,6 +107,7 @@ class PesquisaView(ctk.CTkFrame):
                 objeto=resultado.objeto,
                 tags=tags,
                 score=resultado.score,
+                trecho=resultado.trecho,
                 ao_selecionar=self._ao_selecionar_objeto,
             )
             item.grid(row=indice, column=0, sticky="ew", pady=(0, 8))

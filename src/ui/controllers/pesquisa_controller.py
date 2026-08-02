@@ -21,6 +21,7 @@ class ResultadoPesquisa:
 
     objeto: Objeto
     score: float | None  # None quando encontrado apenas pela busca textual
+    trecho: str | None = None
 
 
 class PesquisaController:
@@ -28,12 +29,11 @@ class PesquisaController:
     lista ordenada.
 
     Decisao de design (nao documentada anteriormente, resolvida aqui):
-    resultados semanticos aparecem primeiro, ordenados por score
-    decrescente, pois possuem uma medida explicita de relevancia.
-    Resultados encontrados apenas pela busca textual aparecem em
-    seguida, sem score, na ordem devolvida pelo FTS5. Um objeto
-    encontrado pelos dois mecanismos aparece uma unica vez na lista,
-    com o score da busca semantica.
+    resultados textuais aparecem primeiro, na ordem devolvida pelo
+    FTS5, pois um match exato tem prioridade sobre similaridade.
+    Resultados semanticos aparecem em seguida, ordenados por score
+    decrescente. Um objeto encontrado pelos dois mecanismos aparece
+    uma unica vez como resultado textual, sem score.
 
     Esta decisao deve ser registrada em docs/interface-grafica.md
     quando a tela de Pesquisa for implementada.
@@ -73,18 +73,19 @@ class PesquisaController:
             else self._limite_semantico_padrao
         )
 
-        semanticos = self._embedding_service.buscar_semantico(termo, limite=limite)
-        ids_semanticos = {objeto.id for objeto, _ in semanticos}
-
         textuais = self._pesquisa_service.buscar_texto(termo)
+        ids_textuais = {objeto.id for objeto, _ in textuais}
+        semanticos = self._embedding_service.buscar_semantico(termo, limite=limite)
 
         resultados = [
+            ResultadoPesquisa(objeto=objeto, score=None, trecho=trecho)
+            for objeto, trecho in textuais
+        ]
+        resultados.extend(
             ResultadoPesquisa(objeto=objeto, score=score)
             for objeto, score in semanticos
-        ]
-        for objeto in textuais:
-            if objeto.id not in ids_semanticos:
-                resultados.append(ResultadoPesquisa(objeto=objeto, score=None))
+            if objeto.id not in ids_textuais
+        )
 
         return resultados
 

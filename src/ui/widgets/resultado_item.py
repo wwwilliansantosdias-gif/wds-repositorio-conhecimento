@@ -25,6 +25,7 @@ class ResultadoItem(ctk.CTkFrame):
         tags: list[Tag],
         ao_selecionar: Callable[[int], None],
         score: float | None = None,
+        trecho: str | None = None,
         **kwargs: Any,
     ) -> None:
         super().__init__(master, corner_radius=8, **kwargs)
@@ -61,6 +62,7 @@ class ResultadoItem(ctk.CTkFrame):
             anchor="w",
         ).grid(row=1, column=0, sticky="w", padx=12)
 
+        linha_tags = 2
         if objeto.resumo:
             resumo_texto = objeto.resumo.strip().replace("\n", " ")
             if len(resumo_texto) > 140:
@@ -73,6 +75,20 @@ class ResultadoItem(ctk.CTkFrame):
                 justify="left",
                 wraplength=360,
             ).grid(row=2, column=0, sticky="w", padx=12, pady=(4, 0))
+            linha_tags += 1
+
+        if trecho:
+            rotulo_trecho = "Contexto:" if score is not None else "Trecho encontrado:"
+            ctk.CTkLabel(
+                self,
+                text=f"{rotulo_trecho} {trecho}",
+                font=ctk.CTkFont(size=11),
+                text_color="gray60",
+                anchor="w",
+                justify="left",
+                wraplength=360,
+            ).grid(row=linha_tags, column=0, sticky="w", padx=12, pady=(4, 0))
+            linha_tags += 1
 
         if tags:
             tags_texto = "  ".join(f"#{tag.nome}" for tag in tags)
@@ -82,9 +98,13 @@ class ResultadoItem(ctk.CTkFrame):
                 font=ctk.CTkFont(size=11),
                 text_color="#5AADA3",
                 anchor="w",
-            ).grid(row=3, column=0, sticky="w", padx=12, pady=(4, 10))
+            ).grid(
+                row=linha_tags, column=0, sticky="w", padx=12, pady=(4, 10)
+            )
         else:
-            ctk.CTkLabel(self, text="", height=1).grid(row=3, column=0, pady=(0, 10))
+            ctk.CTkLabel(self, text="", height=1).grid(
+                row=linha_tags, column=0, pady=(0, 10)
+            )
 
         for widget in (self, cabecalho, titulo_label):
             widget.bind("<Button-1>", self._selecionar)

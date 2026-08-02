@@ -53,7 +53,7 @@ class PesquisaService(BaseService):
 
         return " ".join(tokens)
 
-    def buscar_texto(self, termo: str) -> list[Objeto]:
+    def buscar_texto(self, termo: str) -> list[tuple[Objeto, str | None]]:
         """Busca títulos, resumos e tags de objetos ativos."""
 
         consulta_fts = self._normalizar_termo_fts(termo)
@@ -66,7 +66,9 @@ class PesquisaService(BaseService):
                         SELECT
                             objeto.id AS objeto_id,
                             rank AS ordenacao,
-                            0 AS prioridade
+                            0 AS prioridade,
+                            snippet(tabela_objetos_fts, -1, '', '', '...', 20)
+                                AS trecho
                         FROM tabela_objetos_fts
                         JOIN tabela_objetos AS objeto
                             ON objeto.id = tabela_objetos_fts.rowid
@@ -78,7 +80,8 @@ class PesquisaService(BaseService):
                         SELECT
                             objeto.id AS objeto_id,
                             0 AS ordenacao,
-                            1 AS prioridade
+                            1 AS prioridade,
+                            NULL AS trecho
                         FROM tabela_tags AS tag
                         JOIN tabela_objeto_tag AS objeto_tag
                             ON objeto_tag.tag_id = tag.id
@@ -87,21 +90,26 @@ class PesquisaService(BaseService):
                         WHERE tag.nome = ? COLLATE NOCASE
                             AND objeto.status = 'ativo'
                     ),
-                    objetos_encontrados AS (
+                    resultados_ranqueados AS (
                         SELECT
                             objeto_id,
-                            MIN(prioridade) AS prioridade,
-                            MIN(ordenacao) AS ordenacao
+                            ordenacao,
+                            prioridade,
+                            trecho,
+                            ROW_NUMBER() OVER (
+                                PARTITION BY objeto_id
+                                ORDER BY prioridade, ordenacao
+                            ) AS posicao
                         FROM resultados
-                        GROUP BY objeto_id
                     )
-                    SELECT objeto.*
-                    FROM objetos_encontrados
+                    SELECT objeto.*, resultados_ranqueados.trecho
+                    FROM resultados_ranqueados
                     JOIN tabela_objetos AS objeto
-                        ON objeto.id = objetos_encontrados.objeto_id
+                        ON objeto.id = resultados_ranqueados.objeto_id
+                    WHERE resultados_ranqueados.posicao = 1
                     ORDER BY
-                        objetos_encontrados.prioridade,
-                        objetos_encontrados.ordenacao
+                        resultados_ranqueados.prioridade,
+                        resultados_ranqueados.ordenacao
                     """,
                     (consulta_fts, termo),
                 ).fetchall()
@@ -111,7 +119,7 @@ class PesquisaService(BaseService):
                 # retorna apenas resultados por tag em vez de lançar exceção.
                 rows = connection.execute(
                     """
-                    SELECT objeto.*
+                    SELECT objeto.*, NULL AS trecho
                     FROM tabela_tags AS tag
                     JOIN tabela_objeto_tag AS objeto_tag
                         ON objeto_tag.tag_id = tag.id
@@ -124,4 +132,10 @@ class PesquisaService(BaseService):
                     (termo,),
                 ).fetchall()
 
-        return [Objeto(**dict(row)) for row in rows]
+        resultados: list[tuple[Objeto, str | None]] = []
+        for row in rows:
+            dados_objeto = dict(row)
+            trecho = dados_objeto.pop("trecho")
+            resultados.append((Objeto(**dados_objeto), trecho))
+
+        return resultados

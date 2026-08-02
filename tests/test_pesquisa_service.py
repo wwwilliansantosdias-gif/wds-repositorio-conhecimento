@@ -36,7 +36,7 @@ class PesquisaServiceTests(unittest.TestCase):
 
         encontrados = self.service.buscar_texto("filosofia")
 
-        self.assertEqual(encontrados, [objeto])
+        self.assertEqual([encontrado.id for encontrado, _ in encontrados], [objeto.id])
 
     def test_buscar_texto_encontra_objeto_por_resumo(self) -> None:
         objeto = self.objeto_service.cadastrar(
@@ -47,7 +47,7 @@ class PesquisaServiceTests(unittest.TestCase):
 
         encontrados = self.service.buscar_texto("epistemologia")
 
-        self.assertEqual(encontrados, [objeto])
+        self.assertEqual([encontrado.id for encontrado, _ in encontrados], [objeto.id])
 
     def test_buscar_texto_nao_retorna_objeto_na_lixeira(self) -> None:
         objeto = self.objeto_service.cadastrar("Arquivo reservado", "Nota")
@@ -67,7 +67,9 @@ class PesquisaServiceTests(unittest.TestCase):
 
         encontrados = self.service.buscar_texto("definitiva")
 
-        self.assertEqual([encontrado.id for encontrado in encontrados], [objeto.id])
+        self.assertEqual(
+            [encontrado.id for encontrado, _ in encontrados], [objeto.id]
+        )
 
     def test_buscar_texto_encontra_objeto_por_tag_associada(self) -> None:
         objeto = self.objeto_service.cadastrar("Anotacao", "Nota")
@@ -77,7 +79,32 @@ class PesquisaServiceTests(unittest.TestCase):
 
         encontrados = self.service.buscar_texto("filosofia")
 
-        self.assertEqual(encontrados, [objeto])
+        self.assertEqual([encontrado.id for encontrado, _ in encontrados], [objeto.id])
+        self.assertIsNone(encontrados[0][1])
+
+    def test_buscar_texto_retorna_snippet_do_match_textual(self) -> None:
+        objeto = self.objeto_service.cadastrar(
+            "Anotacao", "Nota", resumo="O estoicismo valoriza a virtude."
+        )
+
+        encontrados = self.service.buscar_texto("estoicismo")
+
+        self.assertEqual(encontrados[0][0].id, objeto.id)
+        self.assertIn("estoicismo", encontrados[0][1])
+        self.assertNotIn("**", encontrados[0][1])
+
+    def test_match_textual_e_tag_preserva_o_snippet_textual(self) -> None:
+        objeto = self.objeto_service.cadastrar(
+            "Anotacao", "Nota", resumo="O estoicismo valoriza a virtude."
+        )
+        tag_service = TagService(self.service.database)
+        tag = tag_service.criar("estoicismo")
+        tag_service.associar(objeto.id, tag.id)
+
+        encontrados = self.service.buscar_texto("estoicismo")
+
+        self.assertEqual(encontrados[0][0].id, objeto.id)
+        self.assertIn("estoicismo", encontrados[0][1])
 
     def test_migration_indexa_objetos_existentes(self) -> None:
         legacy_directory = TemporaryDirectory()
@@ -112,7 +139,9 @@ class PesquisaServiceTests(unittest.TestCase):
 
         encontrados = PesquisaService(database).buscar_texto("legado")
 
-        self.assertEqual([objeto.titulo for objeto in encontrados], ["Registro legado"])
+        self.assertEqual(
+            [objeto.titulo for objeto, _ in encontrados], ["Registro legado"]
+        )
 
     # ---- caracteres especiais (correcao do bug do hifen e afins) ------
 
@@ -123,7 +152,7 @@ class PesquisaServiceTests(unittest.TestCase):
 
         encontrados = self.service.buscar_texto("e-commerce")
 
-        self.assertEqual(encontrados, [objeto])
+        self.assertEqual([encontrado.id for encontrado, _ in encontrados], [objeto.id])
 
     def test_buscar_texto_com_aspas_nao_lanca_excecao(self) -> None:
         self.objeto_service.cadastrar("Anotacao qualquer", "Nota")
@@ -139,7 +168,7 @@ class PesquisaServiceTests(unittest.TestCase):
 
         encontrados = self.service.buscar_texto("(ainda")
 
-        self.assertEqual(encontrados, [objeto])
+        self.assertEqual([encontrado.id for encontrado, _ in encontrados], [objeto.id])
 
     def test_buscar_texto_com_palavra_reservada_do_fts5_nao_lanca_excecao(self) -> None:
         """Digitar AND, OR, NOT ou NEAR como parte natural da frase nao
@@ -156,14 +185,14 @@ class PesquisaServiceTests(unittest.TestCase):
 
         encontrados = self.service.buscar_texto("filosof*")
 
-        self.assertEqual(encontrados, [objeto])
+        self.assertEqual([encontrado.id for encontrado, _ in encontrados], [objeto.id])
 
     def test_buscar_texto_prefixo_com_hifen_e_asterisco_juntos(self) -> None:
         objeto = self.objeto_service.cadastrar("Auto-organizacao", "Nota")
 
         encontrados = self.service.buscar_texto("auto-organiz*")
 
-        self.assertEqual(encontrados, [objeto])
+        self.assertEqual([encontrado.id for encontrado, _ in encontrados], [objeto.id])
 
 
 if __name__ == "__main__":
