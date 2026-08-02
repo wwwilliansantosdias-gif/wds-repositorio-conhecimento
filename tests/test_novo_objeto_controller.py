@@ -18,6 +18,7 @@ from persistence import Database
 from services.acervo_service import AcervoService
 from services.importacao_service import ImportacaoService
 from services.objeto_service import ObjetoService
+from openpyxl import Workbook
 
 from controllers.novo_objeto_controller import NovoObjetoController
 
@@ -49,8 +50,11 @@ class NovoObjetoControllerTests(unittest.TestCase):
         )
 
         self.pasta_notas = temporary_path / "acervo" / "notas"
+        self.pasta_planilhas = temporary_path / "acervo" / "planilhas"
         self.importacao_service = ImportacaoService(
-            self.acervo_service, pasta_notas=self.pasta_notas
+            self.acervo_service,
+            pasta_notas=self.pasta_notas,
+            pasta_planilhas=self.pasta_planilhas,
         )
         self.controller = NovoObjetoController(self.importacao_service)
 
@@ -116,6 +120,21 @@ class NovoObjetoControllerTests(unittest.TestCase):
 
             self.assertTrue(resultado.sucesso)
             self.assertEqual(resultado.objeto.tipo, "Markdown")
+
+    def test_importar_planilha_com_sucesso(self) -> None:
+        with TemporaryDirectory() as origem_dir:
+            arquivo = Path(origem_dir) / "dados.xlsx"
+            planilha = Workbook()
+            planilha.active.append(["Cabecalho", "Conteudo"])
+            planilha.save(arquivo)
+
+            resultado = self.controller.importar_planilha(arquivo)
+
+            self.assertTrue(resultado.sucesso)
+            self.assertEqual(resultado.objeto.tipo, "Planilha")
+            self.assertTrue(
+                (self.pasta_planilhas / f"{resultado.objeto.id}.xlsx").is_file()
+            )
 
     def test_resultado_de_erro_nunca_deixa_objeto_criado_pela_metade(self) -> None:
         """Ao falhar, nao deve sobrar nenhum objeto orfao cadastrado."""

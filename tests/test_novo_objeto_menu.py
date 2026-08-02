@@ -25,6 +25,9 @@ class _ControllerStub:
     def importar_docx(self, caminho: str) -> None:
         self.caminho_recebido = caminho
 
+    def importar_planilha(self, caminho: str) -> None:
+        self.caminho_recebido = caminho
+
     def importar_pdf(self, caminho: str) -> None:
         pass
 
@@ -35,6 +38,21 @@ class _ControllerStub:
 class NovoObjetoMenuTests(unittest.TestCase):
     def test_importar_arquivo_docx_rota_para_controller(self) -> None:
         caminho = r"C:\temp\documento.docx"
+        controller = _ControllerStub()
+        menu = object.__new__(NovoObjetoMenu)
+        menu._controller = controller
+        menu._executar = lambda chamada: chamada()
+
+        with patch(
+            "widgets.novo_objeto_menu.filedialog.askopenfilename",
+            return_value=caminho,
+        ):
+            menu._importar_arquivo()
+
+        self.assertEqual(controller.caminho_recebido, caminho)
+
+    def test_importar_arquivo_xlsx_rota_para_controller(self) -> None:
+        caminho = r"C:\temp\dados.xlsx"
         controller = _ControllerStub()
         menu = object.__new__(NovoObjetoMenu)
         menu._controller = controller

@@ -12,6 +12,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 from docx import Document as DocumentoDocx
+from openpyxl import load_workbook
 
 from models import Objeto
 from services.acervo_service import AcervoService
@@ -20,6 +21,7 @@ from services.acervo_service import AcervoService
 DEFAULT_PASTA_PDFS = Path(__file__).resolve().parents[2] / "acervo" / "pdfs"
 DEFAULT_PASTA_NOTAS = Path(__file__).resolve().parents[2] / "acervo" / "notas"
 DEFAULT_PASTA_DOCUMENTOS = Path(__file__).resolve().parents[2] / "acervo" / "documentos"
+DEFAULT_PASTA_PLANILHAS = Path(__file__).resolve().parents[2] / "acervo" / "planilhas"
 
 
 class DuplicataError(Exception):
@@ -40,11 +42,13 @@ class ImportacaoService:
         pasta_pdfs: Path | str = DEFAULT_PASTA_PDFS,
         pasta_notas: Path | str = DEFAULT_PASTA_NOTAS,
         pasta_documentos: Path | str = DEFAULT_PASTA_DOCUMENTOS,
+        pasta_planilhas: Path | str = DEFAULT_PASTA_PLANILHAS,
     ) -> None:
         self._acervo_service = acervo_service
         self._pasta_pdfs = Path(pasta_pdfs)
         self._pasta_notas = Path(pasta_notas)
         self._pasta_documentos = Path(pasta_documentos)
+        self._pasta_planilhas = Path(pasta_planilhas)
 
     def calcular_hash(self, caminho_arquivo: str | Path) -> str:
         """Calcula o hash SHA-256 do conteudo de um arquivo fisico."""
@@ -213,6 +217,78 @@ class ImportacaoService:
             objeto.id,
             titulo_final,
             "Documento",
+            caminho=str(caminho_definitivo),
+        )
+
+    def extrair_texto_planilha(self, caminho_arquivo: str | Path) -> str:
+        """Extrai apenas o texto das celulas de uma planilha .xlsx.
+
+        Celulas vazias, valores numericos e formulas contribuem com
+        string vazia, sem interromper a extracao das demais celulas.
+        """
+        planilha = load_workbook(str(caminho_arquivo), read_only=True)
+        try:
+            celulas = [
+                celula.value
+                if isinstance(celula.value, str) and celula.data_type != "f"
+                else ""
+                for aba in planilha.worksheets
+                for linha in aba.iter_rows()
+                for celula in linha
+            ]
+            return "\n".join(celula for celula in celulas if celula).strip()
+        finally:
+            planilha.close()
+
+    def importar_planilha(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+        resumo: str | None = None,
+    ) -> Objeto:
+        """Importa uma planilha .xlsx para o Acervo.
+
+        Segue o fluxo de importar_pdf: hash e deteccao de duplicata,
+        extracao de texto pesquisavel, cadastro e indexacao via
+        AcervoService, copia para acervo/planilhas/{id}.xlsx e
+        atualizacao do caminho definitivo. Falhas apos o cadastro
+        removem o objeto recem-criado em cascade.
+        """
+        caminho_original = Path(caminho_arquivo)
+        if not caminho_original.is_file():
+            raise FileNotFoundError(f"Arquivo nao encontrado: {caminho_original}")
+
+        hash_arquivo = self.calcular_hash(caminho_original)
+        self.verificar_duplicata(hash_arquivo)
+
+        resumo_final = (
+            resumo
+            if resumo is not None
+            else self.extrair_texto_planilha(caminho_original)
+        )
+        titulo_final = titulo if titulo is not None else caminho_original.stem
+
+        objeto = self._acervo_service.cadastrar(
+            titulo_final,
+            "Planilha",
+            resumo=resumo_final,
+            hash_arquivo=hash_arquivo,
+        )
+
+        try:
+            self._pasta_planilhas.mkdir(parents=True, exist_ok=True)
+            caminho_definitivo = self._pasta_planilhas / f"{objeto.id}.xlsx"
+            shutil.copy2(caminho_original, caminho_definitivo)
+        except Exception:
+            self._acervo_service.excluir(objeto.id)
+            self._acervo_service.excluir_definitivamente(objeto.id)
+            raise
+
+        return self._acervo_service.atualizar(
+            objeto.id,
+            titulo_final,
+            "Planilha",
             caminho=str(caminho_definitivo),
         )
 

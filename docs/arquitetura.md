@@ -106,6 +106,7 @@ wds-repositorio-conhecimento/
 │   ├── imagens/
 │   ├── links/
 │   ├── notas/
+│   ├── planilhas/
 │   └── pdfs/
 ├── backups/
 ├── chroma_db/

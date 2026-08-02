@@ -58,10 +58,11 @@ class NovoObjetoMenu:
         caminho = filedialog.askopenfilename(
             title="Selecionar arquivo",
             filetypes=[
-                ("Arquivos suportados", "*.pdf *.md *.docx"),
+                ("Arquivos suportados", "*.pdf *.md *.docx *.xlsx"),
                 ("PDF", "*.pdf"),
                 ("Markdown", "*.md"),
                 ("Word", "*.docx"),
+                ("Excel", "*.xlsx"),
             ],
         )
         if not caminho:
@@ -71,12 +72,13 @@ class NovoObjetoMenu:
             ".pdf": self._controller.importar_pdf,
             ".md": self._controller.importar_markdown,
             ".docx": self._controller.importar_docx,
+            ".xlsx": self._controller.importar_planilha,
         }
         importar = importadores.get(Path(caminho).suffix.lower())
         if importar is None:
             messagebox.showerror(
                 "Formato nao suportado",
-                "Selecione um arquivo PDF, Markdown ou DOCX.",
+                "Selecione um arquivo PDF, Markdown, DOCX ou XLSX.",
             )
             return
         self._executar(lambda: importar(caminho))

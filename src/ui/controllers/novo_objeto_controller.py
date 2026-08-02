@@ -82,6 +82,30 @@ class NovoObjetoController:
                 mensagem_erro=f"Nao foi possivel importar o documento: {erro}",
             )
 
+    def importar_planilha(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+    ) -> ResultadoCriacao:
+        """Importa uma planilha .xlsx e converte falhas em resultado uniforme."""
+        try:
+            objeto = self._importacao_service.importar_planilha(
+                caminho_arquivo, titulo=titulo
+            )
+            return ResultadoCriacao(sucesso=True, objeto=objeto)
+        except DuplicataError as erro:
+            return ResultadoCriacao(sucesso=False, mensagem_erro=str(erro))
+        except FileNotFoundError:
+            return ResultadoCriacao(
+                sucesso=False, mensagem_erro="Arquivo nao encontrado."
+            )
+        except Exception as erro:
+            return ResultadoCriacao(
+                sucesso=False,
+                mensagem_erro=f"Nao foi possivel importar a planilha: {erro}",
+            )
+
     def importar_markdown(
         self,
         caminho_arquivo: str | Path,

@@ -21,6 +21,7 @@ from services.importacao_service import DuplicataError, ImportacaoService
 from services.objeto_service import ObjetoService
 
 from docx import Document as DocumentoDocx
+from openpyxl import Workbook
 
 
 # PDF real (gerado com reportlab), contendo o texto:
@@ -49,11 +50,13 @@ class ImportacaoServiceTests(unittest.TestCase):
         self.pasta_pdfs = temporary_path / "acervo" / "pdfs"
         self.pasta_notas = temporary_path / "acervo" / "notas"
         self.pasta_documentos = temporary_path / "acervo" / "documentos"
+        self.pasta_planilhas = temporary_path / "acervo" / "planilhas"
         self.importacao_service = ImportacaoService(
             self.acervo_service,
             pasta_pdfs=self.pasta_pdfs,
             pasta_notas=self.pasta_notas,
             pasta_documentos=self.pasta_documentos,
+            pasta_planilhas=self.pasta_planilhas,
         )
 
         self.pdf_path = temporary_path / "documento_original.pdf"
@@ -73,6 +76,14 @@ class ImportacaoServiceTests(unittest.TestCase):
             "Reflexao sobre o pensamento filosofico de Epicteto."
         )
         documento_docx.save(str(self.docx_path))
+
+        self.planilha_path = temporary_path / "orcamento_original.xlsx"
+        planilha = Workbook()
+        aba = planilha.active
+        aba.append(["Categoria", "Valor", "Formula"])
+        aba.append(["Alimentacao", 350, "=SUM(B2:B2)"])
+        aba.append([None, None, None])
+        planilha.save(self.planilha_path)
 
     def tearDown(self) -> None:
         del self.embedding_service
@@ -277,6 +288,32 @@ class ImportacaoServiceTests(unittest.TestCase):
         }
         self.assertEqual(len(ids), 3)
         self.assertEqual(len(hashes), 3)
+
+    def test_extrair_texto_planilha_retorna_apenas_celulas_textuais(self) -> None:
+        texto = self.importacao_service.extrair_texto_planilha(self.planilha_path)
+
+        self.assertIn("Categoria", texto)
+        self.assertIn("Alimentacao", texto)
+        self.assertNotIn("350", texto)
+        self.assertNotIn("SUM", texto)
+
+    def test_importar_planilha_cadastra_copia_e_indexa_o_objeto(self) -> None:
+        objeto = self.importacao_service.importar_planilha(self.planilha_path)
+
+        self.assertEqual(objeto.titulo, "orcamento_original")
+        self.assertEqual(objeto.tipo, "Planilha")
+        self.assertIn("Categoria", objeto.resumo)
+        self.assertIsNotNone(objeto.hash_arquivo)
+
+        caminho_copiado = self.pasta_planilhas / f"{objeto.id}.xlsx"
+        self.assertTrue(caminho_copiado.is_file())
+        self.assertEqual(objeto.caminho, str(caminho_copiado))
+
+    def test_importar_planilha_impede_duplicata(self) -> None:
+        self.importacao_service.importar_planilha(self.planilha_path)
+
+        with self.assertRaises(DuplicataError):
+            self.importacao_service.importar_planilha(self.planilha_path)
 
     def test_cadastrar_link_persiste_e_indexa(self) -> None:
         objeto = self.importacao_service.cadastrar_link(

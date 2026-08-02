@@ -22,6 +22,8 @@ acervo/links/*
 !acervo/links/.gitkeep
 acervo/documentos/*
 !acervo/documentos/.gitkeep
+acervo/planilhas/*
+!acervo/planilhas/.gitkeep
 
 # Indice semantico (ChromaDB) e backups: dados pessoais gerados
 # localmente, nunca versionados. Estrutura de pastas mantida via
