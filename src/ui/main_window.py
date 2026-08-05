@@ -47,6 +47,7 @@ from views.editor_markdown import EditorMarkdownWindow
 from views.backup import BackupWindow
 from views.configuracoes import ConfiguracoesWindow
 from widgets.novo_objeto_menu import NovoObjetoMenu
+from widgets.tags_panel import TagsPanel
 from widgets.toolbar import Toolbar
 
 
@@ -122,8 +123,17 @@ class MainWindow(ctk.CTk):
         corpo = ctk.CTkFrame(self, fg_color="transparent")
         corpo.grid(row=1, column=0, sticky="nsew")
         corpo.grid_rowconfigure(0, weight=1)
-        corpo.grid_columnconfigure(0, weight=1, minsize=380)
-        corpo.grid_columnconfigure(1, weight=2)
+        corpo.grid_columnconfigure(0, weight=0)
+        corpo.grid_columnconfigure(1, weight=1, minsize=380)
+        corpo.grid_columnconfigure(2, weight=2)
+
+        self.tags_panel = TagsPanel(
+            corpo,
+            self.tag_controller,
+            ao_selecionar_tag=self._ao_selecionar_tag,
+            width=180,
+        )
+        self.tags_panel.grid(row=0, column=0, sticky="nsw", padx=(12, 6), pady=12)
 
         self.pesquisa_view = PesquisaView(
             corpo,
@@ -131,7 +141,7 @@ class MainWindow(ctk.CTk):
             self.tag_controller,
             ao_selecionar_objeto=self._ao_selecionar_objeto,
         )
-        self.pesquisa_view.grid(row=0, column=0, sticky="nsew", padx=(12, 6), pady=12)
+        self.pesquisa_view.grid(row=0, column=1, sticky="nsew", padx=(6, 6), pady=12)
 
         self.objeto_view = ObjetoView(
             corpo,
@@ -141,15 +151,17 @@ class MainWindow(ctk.CTk):
             ao_selecionar_tag=self._ao_selecionar_tag,
             ao_editar_objeto=self._ao_editar_objeto,
         )
-        self.objeto_view.grid(row=0, column=1, sticky="nsew", padx=(6, 12), pady=12)
+        self.objeto_view.grid(row=0, column=2, sticky="nsew", padx=(6, 12), pady=12)
 
     def _ao_pesquisar(self, termo: str) -> None:
         self.pesquisa_view.pesquisar(termo)
 
     def _ao_selecionar_objeto(self, objeto_id: int) -> None:
-        """Atualiza apenas o painel de Objeto em Foco -- os resultados
-        da pesquisa a esquerda permanecem intactos."""
+        """Atualiza o painel de Objeto em Foco -- os resultados da
+        pesquisa a esquerda permanecem intactos -- e recarrega o painel
+        fixo de tags, para que uma tag recem-criada apareca nele."""
         self.objeto_view.mostrar_objeto(objeto_id)
+        self.tags_panel.atualizar()
 
     def _ao_selecionar_tag(self, nome_tag: str) -> None:
         """Atualiza os Resultados usando a pesquisa textual da tag."""
