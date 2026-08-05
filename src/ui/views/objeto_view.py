@@ -22,6 +22,8 @@ from models import Objeto, Tag
 from widgets.resultado_item import ResultadoItem
 from widgets.tag_chip import TagChip
 
+LIMITE_RESUMO_DETALHE = 2000
+
 
 class ObjetoView(ctk.CTkScrollableFrame):
     """Exibe o Objeto em Foco e seu Contexto."""
@@ -122,9 +124,13 @@ class ObjetoView(ctk.CTkScrollableFrame):
             ).grid(row=linha, column=0, sticky="w", padx=16, pady=(4, 4))
             linha += 1
 
+            resumo_texto = detalhe.objeto.resumo
+            if len(resumo_texto) > LIMITE_RESUMO_DETALHE:
+                resumo_texto = resumo_texto[:LIMITE_RESUMO_DETALHE] + "... (truncado)"
+
             ctk.CTkLabel(
                 self,
-                text=detalhe.objeto.resumo,
+                text=resumo_texto,
                 font=ctk.CTkFont(size=13),
                 anchor="w",
                 justify="left",
