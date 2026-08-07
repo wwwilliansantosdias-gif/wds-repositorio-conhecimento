@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import Mock
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_DIRECTORY = PROJECT_ROOT / "src"
@@ -15,6 +16,7 @@ for caminho in (SOURCE_DIRECTORY, UI_DIRECTORY):
         sys.path.insert(0, str(caminho))
 
 from persistence import Database
+from services.acervo_service import AcervoService
 from services.objeto_service import ObjetoService
 from services.tag_service import TagService
 
@@ -31,7 +33,15 @@ class TagControllerTests(unittest.TestCase):
 
         self.objeto_service = ObjetoService(self.database)
         self.tag_service = TagService(self.database)
-        self.controller = TagController(self.tag_service, self.objeto_service)
+        # AcervoService mockado: os testes deste arquivo cobrem a logica
+        # de tags (obter-ou-criar, associar/desassociar), nao a
+        # reindexacao semantica em si -- essa e coberta em
+        # test_acervo_service.py e test_embedding_service.py com o
+        # servico real.
+        self.acervo_service = Mock(spec=AcervoService)
+        self.controller = TagController(
+            self.tag_service, self.objeto_service, self.acervo_service
+        )
 
     def tearDown(self) -> None:
         try:
@@ -97,6 +107,82 @@ class TagControllerTests(unittest.TestCase):
 
         self.assertEqual(self.controller.listar_por_objeto(objeto1.id), [])
         self.assertEqual(len(self.controller.listar_todas()), 1)
+
+    def test_adicionar_tag_reindexa_o_objeto_com_o_texto_certo(self) -> None:
+        objeto = self.objeto_service.cadastrar("Objeto 1", "Nota")
+
+        self.controller.adicionar_tag(objeto.id, "filosofia")
+
+        self.acervo_service.reindexar_com_contexto_extra.assert_called_once_with(
+            objeto.id, "Tags: filosofia"
+        )
+
+    def test_adicionar_segunda_tag_reindexa_com_todas_as_tags_atuais(self) -> None:
+        objeto = self.objeto_service.cadastrar("Objeto 1", "Nota")
+        self.controller.adicionar_tag(objeto.id, "filosofia")
+
+        self.controller.adicionar_tag(objeto.id, "arte")
+
+        self.acervo_service.reindexar_com_contexto_extra.assert_called_with(
+            objeto.id, "Tags: arte, filosofia"
+        )
+
+    def test_adicionar_tag_a_objeto_inexistente_nao_reindexa(self) -> None:
+        self.controller.adicionar_tag(99999, "tag-orfa")
+
+        self.acervo_service.reindexar_com_contexto_extra.assert_not_called()
+
+    def test_remover_tag_reindexa_refletindo_a_lista_atualizada(self) -> None:
+        objeto = self.objeto_service.cadastrar("Objeto 1", "Nota")
+        resultado = self.controller.adicionar_tag(objeto.id, "filosofia")
+        self.controller.adicionar_tag(objeto.id, "arte")
+        self.acervo_service.reindexar_com_contexto_extra.reset_mock()
+
+        self.controller.remover_tag(objeto.id, resultado.tag.id)
+
+        self.acervo_service.reindexar_com_contexto_extra.assert_called_once_with(
+            objeto.id, "Tags: arte"
+        )
+
+    def test_remover_a_ultima_tag_reindexa_com_texto_extra_vazio(self) -> None:
+        objeto = self.objeto_service.cadastrar("Objeto 1", "Nota")
+        resultado = self.controller.adicionar_tag(objeto.id, "filosofia")
+        self.acervo_service.reindexar_com_contexto_extra.reset_mock()
+
+        self.controller.remover_tag(objeto.id, resultado.tag.id)
+
+        self.acervo_service.reindexar_com_contexto_extra.assert_called_once_with(
+            objeto.id, ""
+        )
+
+    def test_falha_da_reindexacao_nao_impede_sucesso_ao_adicionar_tag(self) -> None:
+        objeto = self.objeto_service.cadastrar("Objeto 1", "Nota")
+        self.acervo_service.reindexar_com_contexto_extra.side_effect = RuntimeError(
+            "EmbeddingService indisponivel"
+        )
+
+        resultado = self.controller.adicionar_tag(objeto.id, "filosofia")
+
+        self.assertTrue(resultado.sucesso)
+        self.assertEqual(self.controller.listar_por_objeto(objeto.id)[0].nome, "filosofia")
+
+    def test_falha_da_reindexacao_nao_impede_remover_tag(self) -> None:
+        objeto = self.objeto_service.cadastrar("Objeto 1", "Nota")
+        resultado = self.controller.adicionar_tag(objeto.id, "filosofia")
+        self.acervo_service.reindexar_com_contexto_extra.side_effect = RuntimeError(
+            "EmbeddingService indisponivel"
+        )
+
+        self.controller.remover_tag(objeto.id, resultado.tag.id)  # nao deve levantar
+
+        self.assertEqual(self.controller.listar_por_objeto(objeto.id), [])
+
+    def test_remover_tag_de_objeto_inexistente_nao_levanta_excecao(self) -> None:
+        self.acervo_service.reindexar_com_contexto_extra.side_effect = LookupError(
+            "objeto nao encontrado"
+        )
+
+        self.controller.remover_tag(99999, 1)  # nao deve levantar excecao
 
 
 if __name__ == "__main__":

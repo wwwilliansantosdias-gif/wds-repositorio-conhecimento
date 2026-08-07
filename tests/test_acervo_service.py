@@ -65,6 +65,48 @@ class AcervoServiceTests(unittest.TestCase):
         encontrados = self.embedding_service.buscar_semantico("universo e estrelas")
         self.assertEqual(encontrados[0][0].id, objeto.id)
 
+    def test_reindexar_com_contexto_extra_indexa_pelo_significado_do_texto_extra(
+        self,
+    ) -> None:
+        objeto = self.acervo.cadastrar(
+            "Planilha mensal", "Nota", resumo="Controle de gastos do mes."
+        )
+
+        self.acervo.reindexar_com_contexto_extra(objeto.id, "Tags: orcamento")
+
+        encontrados = self.embedding_service.buscar_semantico("financas")
+        self.assertEqual(encontrados[0][0].id, objeto.id)
+
+    def test_reindexar_com_contexto_extra_nao_altera_o_resumo_persistido(self) -> None:
+        objeto = self.acervo.cadastrar(
+            "Planilha mensal", "Nota", resumo="Controle de gastos do mes."
+        )
+
+        self.acervo.reindexar_com_contexto_extra(objeto.id, "Tags: orcamento, casa")
+
+        objeto_apos = self.objeto_service.obter_por_id(objeto.id)
+        self.assertEqual(objeto_apos.resumo, "Controle de gastos do mes.")
+
+    def test_reindexar_com_contexto_extra_vazio_nao_quebra_e_preserva_a_busca(
+        self,
+    ) -> None:
+        objeto = self.acervo.cadastrar(
+            "Cachorro", "Nota", resumo="Um animal de estimacao leal."
+        )
+
+        self.acervo.reindexar_com_contexto_extra(objeto.id, "")
+
+        objeto_apos = self.objeto_service.obter_por_id(objeto.id)
+        self.assertEqual(objeto_apos.resumo, "Um animal de estimacao leal.")
+        encontrados = self.embedding_service.buscar_semantico("cao")
+        self.assertEqual(encontrados[0][0].id, objeto.id)
+
+    def test_reindexar_com_contexto_extra_de_objeto_inexistente_levanta_erro(
+        self,
+    ) -> None:
+        with self.assertRaises(LookupError):
+            self.acervo.reindexar_com_contexto_extra(99999, "Tags: qualquer")
+
     def test_excluir_definitivamente_remove_do_indice_semantico(self) -> None:
         objeto = self.acervo.cadastrar(
             "Cachorro", "Nota", resumo="Um animal leal."

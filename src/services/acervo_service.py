@@ -65,6 +65,24 @@ class AcervoService:
         self._embedding_service.indexar_objeto(objeto.id, objeto.titulo, objeto.resumo)
         return objeto
 
+    def reindexar_com_contexto_extra(self, objeto_id: int, texto_extra: str) -> None:
+        """Reindexa o vetor semantico do objeto incluindo texto adicional
+        (ex: nomes de tags associadas), sem alterar o resumo persistido no
+        SQLite. Usado quando o contexto semantico do objeto muda por um
+        motivo que nao e uma edicao do seu conteudo.
+
+        Diferente de `atualizar`, que grava no SQLite tudo o que recebe,
+        este metodo nunca escreve em tabela_objetos -- so le o objeto
+        para montar o texto do vetor. `texto_extra` vazio e valido (ex:
+        objeto perdeu a ultima tag associada) e apenas resulta no
+        proprio resumo, sem sujeira.
+        """
+        objeto = self._objeto_service.obter_por_id(objeto_id)
+        resumo_com_contexto = f"{objeto.resumo or ''}\n{texto_extra}".strip()
+        self._embedding_service.indexar_objeto(
+            objeto_id, objeto.titulo, resumo_com_contexto
+        )
+
     def excluir(self, objeto_id: int) -> Objeto:
         """Move o objeto para a lixeira (exclusao logica).
 

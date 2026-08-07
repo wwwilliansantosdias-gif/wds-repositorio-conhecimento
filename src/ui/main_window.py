@@ -83,7 +83,9 @@ class MainWindow(ctk.CTk):
         self.pesquisa_controller = PesquisaController(
             self.pesquisa_service, self.embedding_service, self.acervo_service
         )
-        self.tag_controller = TagController(self.tag_service, self.objeto_service)
+        self.tag_controller = TagController(
+            self.tag_service, self.objeto_service, self.acervo_service
+        )
         self.objeto_controller = ObjetoController(
             self.acervo_service,
             self.tag_service,

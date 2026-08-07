@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from models import Tag
+from services.acervo_service import AcervoService
 from services.objeto_service import ObjetoService
 from services.tag_service import TagService
 
@@ -25,9 +26,15 @@ class ResultadoAdicionarTag:
 class TagController:
     """Controller usado pelo widget de tags na tela de Objeto em Foco."""
 
-    def __init__(self, tag_service: TagService, objeto_service: ObjetoService) -> None:
+    def __init__(
+        self,
+        tag_service: TagService,
+        objeto_service: ObjetoService,
+        acervo_service: AcervoService,
+    ) -> None:
         self._tag_service = tag_service
         self._objeto_service = objeto_service
+        self._acervo_service = acervo_service
 
     def listar_todas(self) -> list[Tag]:
         """Retorna todas as tags do sistema, para sugestao/autocompletar."""
@@ -63,6 +70,7 @@ class TagController:
 
         tag = self._buscar_por_nome(nome_tag) or self._tag_service.criar(nome_tag)
         self._tag_service.associar(objeto_id, tag.id)
+        self._reindexar_com_tags_atuais(objeto_id)
         return ResultadoAdicionarTag(sucesso=True, tag=tag)
 
     def remover_tag(self, objeto_id: int, tag_id: int) -> None:
@@ -72,9 +80,38 @@ class TagController:
         o vinculo com este objeto especifico e removido.
         """
         self._tag_service.desassociar(objeto_id, tag_id)
+        self._reindexar_com_tags_atuais(objeto_id)
 
     def _buscar_por_nome(self, nome: str) -> Tag | None:
         for tag in self._tag_service.listar():
             if tag.nome == nome:
                 return tag
         return None
+
+    def _reindexar_com_tags_atuais(self, objeto_id: int) -> None:
+        """Reindexa o vetor semantico do objeto para refletir as tags
+        atualmente associadas a ele.
+
+        TagService so mexe no SQLite e nunca passa pelo AcervoService,
+        entao associar/desassociar uma tag nunca atualizava o vetor
+        semantico do objeto antes desta chamada. Usa
+        AcervoService.reindexar_com_contexto_extra (nao `atualizar`)
+        para nunca sujar o resumo persistido no SQLite com texto de
+        tag. Lista de tags vazia (removeu a ultima) gera texto extra
+        vazio, sem erro.
+
+        Melhor esforco, mesmo padrao ja usado em
+        AcervoService.excluir_definitivamente para a remocao do vetor:
+        se a reindexacao falhar por qualquer motivo (objeto ja nao
+        existe mais, EmbeddingService indisponivel etc.), a
+        associacao/remocao da tag no SQLite -- ja confirmada -- nao e
+        desfeita nem reportada como erro ao usuario.
+        """
+        tags_atuais = self._tag_service.listar_por_objeto(objeto_id)
+        nomes_tags = ", ".join(tag.nome for tag in tags_atuais)
+        texto_extra = f"Tags: {nomes_tags}" if nomes_tags else ""
+
+        try:
+            self._acervo_service.reindexar_com_contexto_extra(objeto_id, texto_extra)
+        except Exception:
+            pass
