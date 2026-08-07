@@ -22,6 +22,7 @@ DEFAULT_PASTA_PDFS = Path(__file__).resolve().parents[2] / "acervo" / "pdfs"
 DEFAULT_PASTA_NOTAS = Path(__file__).resolve().parents[2] / "acervo" / "notas"
 DEFAULT_PASTA_DOCUMENTOS = Path(__file__).resolve().parents[2] / "acervo" / "documentos"
 DEFAULT_PASTA_PLANILHAS = Path(__file__).resolve().parents[2] / "acervo" / "planilhas"
+DEFAULT_PASTA_IMAGENS = Path(__file__).resolve().parents[2] / "acervo" / "imagens"
 
 
 class DuplicataError(Exception):
@@ -43,12 +44,14 @@ class ImportacaoService:
         pasta_notas: Path | str = DEFAULT_PASTA_NOTAS,
         pasta_documentos: Path | str = DEFAULT_PASTA_DOCUMENTOS,
         pasta_planilhas: Path | str = DEFAULT_PASTA_PLANILHAS,
+        pasta_imagens: Path | str = DEFAULT_PASTA_IMAGENS,
     ) -> None:
         self._acervo_service = acervo_service
         self._pasta_pdfs = Path(pasta_pdfs)
         self._pasta_notas = Path(pasta_notas)
         self._pasta_documentos = Path(pasta_documentos)
         self._pasta_planilhas = Path(pasta_planilhas)
+        self._pasta_imagens = Path(pasta_imagens)
 
     def calcular_hash(self, caminho_arquivo: str | Path) -> str:
         """Calcula o hash SHA-256 do conteudo de um arquivo fisico."""
@@ -289,6 +292,74 @@ class ImportacaoService:
             objeto.id,
             titulo_final,
             "Planilha",
+            caminho=str(caminho_definitivo),
+        )
+
+    def importar_imagem(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+        descricao: str | None = None,
+    ) -> Objeto:
+        """Importa uma imagem para o Acervo.
+
+        Diferente dos demais formatos, nao ha etapa de extracao
+        automatica de texto (decisao registrada em
+        docs/wds-1.1-planejamento.md, secao 2: OCR exigiria instalar um
+        programa externo, fora do escopo deste incremento). Todo o
+        texto pesquisavel vem de `descricao`, digitada manualmente pelo
+        usuario no momento da importacao -- por isso e obrigatoria, sem
+        ela a imagem ficaria essencialmente invisivel para a busca.
+
+        Fluxo quase identico ao dos demais formatos: hash e
+        deteccao de duplicata, cadastro via AcervoService (indexacao
+        semantica automatica) usando `descricao` como resumo, copia do
+        arquivo fisico para acervo/imagens/{id}{extensao} -- preserva a
+        extensao original (.png, .jpg ou .jpeg), diferente dos demais
+        importadores, que sempre usam uma extensao fixa -- e
+        atualizacao do objeto com o caminho definitivo.
+
+        Se qualquer etapa apos o cadastro falhar, o objeto recem-criado
+        e removido em cascade, mesmo comportamento dos demais
+        importadores.
+        """
+        caminho_original = Path(caminho_arquivo)
+        if not caminho_original.is_file():
+            raise FileNotFoundError(f"Arquivo nao encontrado: {caminho_original}")
+
+        if descricao is None or not descricao.strip():
+            raise ValueError(
+                "A descricao nao pode ser vazia: sem OCR, ela e o unico "
+                "texto pesquisavel da imagem."
+            )
+
+        hash_arquivo = self.calcular_hash(caminho_original)
+        self.verificar_duplicata(hash_arquivo)
+
+        titulo_final = titulo if titulo is not None else caminho_original.stem
+
+        objeto = self._acervo_service.cadastrar(
+            titulo_final,
+            "Imagem",
+            resumo=descricao,
+            hash_arquivo=hash_arquivo,
+        )
+
+        try:
+            self._pasta_imagens.mkdir(parents=True, exist_ok=True)
+            extensao = caminho_original.suffix.lower()
+            caminho_definitivo = self._pasta_imagens / f"{objeto.id}{extensao}"
+            shutil.copy2(caminho_original, caminho_definitivo)
+        except Exception:
+            self._acervo_service.excluir(objeto.id)
+            self._acervo_service.excluir_definitivamente(objeto.id)
+            raise
+
+        return self._acervo_service.atualizar(
+            objeto.id,
+            titulo_final,
+            "Imagem",
             caminho=str(caminho_definitivo),
         )
 

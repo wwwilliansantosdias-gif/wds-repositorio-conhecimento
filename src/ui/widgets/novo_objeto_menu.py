@@ -1,8 +1,9 @@
 """Menu de criacao "Novo Objeto", acionado pelo botao na Barra Superior.
 
 Oferece as formas de criacao suportadas por NovoObjetoController --
-Importar Arquivo (PDF, Markdown ou Docx), Cadastrar Link, Nova Nota --
-conforme decidido em docs/interface-grafica.md. Cada opcao
+Importar Arquivo (PDF, Markdown, Docx, Planilha ou Imagem), Cadastrar
+Link, Nova Nota -- conforme decidido em docs/interface-grafica.md e
+docs/wds-1.1-planejamento.md. Cada opcao
 coleta a entrada necessaria (seletor de arquivo nativo ou um
 DialogoTexto) e delega ao controller, traduzindo o resultado em
 feedback simples (mensagem de erro ou o novo objeto criado).
@@ -25,6 +26,9 @@ from typing import Any
 from controllers.novo_objeto_controller import NovoObjetoController, ResultadoCriacao
 from tarefas_segundo_plano import executar_em_segundo_plano
 from widgets.dialogo_texto import DialogoTexto
+
+
+EXTENSOES_IMAGEM = frozenset({".png", ".jpg", ".jpeg"})
 
 
 class NovoObjetoMenu:
@@ -58,14 +62,23 @@ class NovoObjetoMenu:
         caminho = filedialog.askopenfilename(
             title="Selecionar arquivo",
             filetypes=[
-                ("Arquivos suportados", "*.pdf *.md *.docx *.xlsx"),
+                (
+                    "Arquivos suportados",
+                    "*.pdf *.md *.docx *.xlsx *.png *.jpg *.jpeg",
+                ),
                 ("PDF", "*.pdf"),
                 ("Markdown", "*.md"),
                 ("Word", "*.docx"),
                 ("Excel", "*.xlsx"),
+                ("Imagem", "*.png *.jpg *.jpeg"),
             ],
         )
         if not caminho:
+            return
+
+        extensao = Path(caminho).suffix.lower()
+        if extensao in EXTENSOES_IMAGEM:
+            self._importar_imagem(caminho)
             return
 
         importadores = {
@@ -74,14 +87,32 @@ class NovoObjetoMenu:
             ".docx": self._controller.importar_docx,
             ".xlsx": self._controller.importar_planilha,
         }
-        importar = importadores.get(Path(caminho).suffix.lower())
+        importar = importadores.get(extensao)
         if importar is None:
             messagebox.showerror(
                 "Formato nao suportado",
-                "Selecione um arquivo PDF, Markdown, DOCX ou XLSX.",
+                "Selecione um arquivo PDF, Markdown, DOCX, XLSX, PNG ou JPG.",
             )
             return
         self._executar(lambda: importar(caminho))
+
+    def _importar_imagem(self, caminho: str) -> None:
+        """Imagem exige um passo extra: sem OCR, o texto pesquisavel vem
+        inteiramente da descricao digitada aqui -- mesmo padrao de
+        DialogoTexto ja usado em _cadastrar_link()."""
+        dialogo = DialogoTexto(
+            self._master, "Importar Imagem", ["Titulo (opcional)", "Descricao"]
+        )
+        dados = dialogo.aguardar_resultado()
+        if dados is None:
+            return
+        titulo = dados["Titulo (opcional)"].strip() or None
+        descricao = dados["Descricao"].strip() or None
+        self._executar(
+            lambda: self._controller.importar_imagem(
+                caminho, titulo=titulo, descricao=descricao
+            )
+        )
 
     def _cadastrar_link(self) -> None:
         dialogo = DialogoTexto(

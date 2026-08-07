@@ -16,7 +16,8 @@ for caminho in (SOURCE_DIRECTORY, UI_DIRECTORY):
     if str(caminho) not in sys.path:
         sys.path.insert(0, str(caminho))
 
-from models import Objeto
+from controllers.tag_controller import ResultadoAdicionarTag
+from models import Objeto, Tag
 from views.objeto_view import LIMITE_RESUMO_DETALHE, ObjetoView
 
 
@@ -215,6 +216,208 @@ class ObjetoViewTests(unittest.TestCase):
         textos_resumo = [kwargs["text"] for kwargs in labels if kwargs.get("text") == resumo_curto]
 
         self.assertEqual(len(textos_resumo), 1)
+
+    def _mostrar_objeto_e_capturar_miniaturas(
+        self, tipo: str
+    ) -> list[dict[str, object]]:
+        objeto = self._criar_objeto(tipo, r"C:\\acervo\\imagens\\1.png", "Descricao.")
+        detalhe = SimpleNamespace(
+            objeto=objeto,
+            tags=[],
+            relacionamentos=[],
+            sugestoes=[],
+        )
+        view = object.__new__(ObjetoView)
+        view._objeto_controller = Mock(carregar_detalhe=Mock(return_value=detalhe))
+        view._ao_editar_objeto = Mock()
+        view._renderizar_tags_e_entrada = Mock()
+        view._renderizar_secao_contexto = Mock(side_effect=lambda linha, **kwargs: linha + 1)
+        view.winfo_children = Mock(return_value=[])
+
+        miniaturas_criadas: list[dict[str, object]] = []
+
+        def criar_miniatura(master: object, caminho: object, **kwargs: object) -> Mock:
+            miniaturas_criadas.append({"caminho": caminho})
+            widget = Mock()
+            widget.grid = Mock()
+            return widget
+
+        with (
+            patch("views.objeto_view.ctk.CTkFrame", return_value=Mock()),
+            patch("views.objeto_view.ctk.CTkLabel", return_value=Mock()),
+            patch("views.objeto_view.ctk.CTkButton", return_value=Mock()),
+            patch("views.objeto_view.ctk.CTkFont"),
+            patch("views.objeto_view.MiniaturaImagem", side_effect=criar_miniatura),
+        ):
+            view.mostrar_objeto(1)
+
+        return miniaturas_criadas
+
+    def test_miniatura_e_exibida_apenas_para_objetos_do_tipo_imagem(self) -> None:
+        for tipo, deve_exibir in (("Imagem", True), ("PDF", False), ("Nota", False)):
+            with self.subTest(tipo=tipo):
+                miniaturas = self._mostrar_objeto_e_capturar_miniaturas(tipo)
+                self.assertEqual(len(miniaturas) == 1, deve_exibir)
+                if miniaturas:
+                    self.assertEqual(
+                        miniaturas[0]["caminho"], r"C:\\acervo\\imagens\\1.png"
+                    )
+
+    def test_rotulo_do_texto_pesquisavel_e_descricao_para_imagem(self) -> None:
+        objeto = self._criar_objeto(
+            "Imagem", r"C:\\acervo\\imagens\\1.png", "Uma bela paisagem."
+        )
+        detalhe = SimpleNamespace(
+            objeto=objeto, tags=[], relacionamentos=[], sugestoes=[]
+        )
+        view = object.__new__(ObjetoView)
+        view._objeto_controller = Mock(carregar_detalhe=Mock(return_value=detalhe))
+        view._ao_editar_objeto = Mock()
+        view._renderizar_tags_e_entrada = Mock()
+        view._renderizar_secao_contexto = Mock(side_effect=lambda linha, **kwargs: linha + 1)
+        view.winfo_children = Mock(return_value=[])
+
+        labels_criados: list[dict[str, object]] = []
+
+        def criar_label(*args: object, **kwargs: object) -> Mock:
+            labels_criados.append(kwargs)
+            return Mock()
+
+        with (
+            patch("views.objeto_view.ctk.CTkFrame", return_value=Mock()),
+            patch("views.objeto_view.ctk.CTkLabel", side_effect=criar_label),
+            patch("views.objeto_view.ctk.CTkButton", return_value=Mock()),
+            patch("views.objeto_view.ctk.CTkFont"),
+            patch("views.objeto_view.MiniaturaImagem", return_value=Mock(grid=Mock())),
+        ):
+            view.mostrar_objeto(1)
+
+        textos = [kwargs.get("text") for kwargs in labels_criados]
+        self.assertIn("Descrição", textos)
+        self.assertNotIn("Resumo", textos)
+
+    @staticmethod
+    def _executar_sincronamente_e_trocar_objeto(view: ObjetoView, novo_objeto_id: int):
+        """Fake de executar_em_segundo_plano: roda a tarefa e chama
+        ao_concluir imediatamente (sem thread de verdade), mas simula o
+        usuario trocando de objeto ANTES da tarefa terminar -- exatamente
+        a condicao de corrida que _ao_terminar_adicionar_tag/
+        _ao_terminar_remover_tag precisam tratar."""
+
+        def fake_executar(master, tarefa, ao_concluir, ao_falhar=None):
+            resultado = tarefa()
+            view._objeto_id_atual = novo_objeto_id
+            ao_concluir(resultado)
+
+        return fake_executar
+
+    @staticmethod
+    def _executar_sincronamente(master, tarefa, ao_concluir, ao_falhar=None):
+        """Fake de executar_em_segundo_plano sem troca de objeto no meio --
+        caminho feliz, objeto atual continua o mesmo ate a tarefa terminar."""
+        ao_concluir(tarefa())
+
+    def test_adicionar_tag_atualiza_a_tela_quando_objeto_atual_nao_mudou(self) -> None:
+        view = object.__new__(ObjetoView)
+        view._objeto_id_atual = 1
+        view._tag_controller = Mock(
+            adicionar_tag=Mock(
+                return_value=ResultadoAdicionarTag(
+                    sucesso=True, tag=Tag(id=1, nome="python")
+                )
+            )
+        )
+        view.mostrar_objeto = Mock()
+        entrada = Mock(get=Mock(return_value="python"))
+
+        with patch(
+            "views.objeto_view.executar_em_segundo_plano",
+            side_effect=self._executar_sincronamente,
+        ):
+            view._adicionar_tag(entrada)
+
+        view._tag_controller.adicionar_tag.assert_called_once_with(1, "python")
+        view.mostrar_objeto.assert_called_once_with(1)
+
+    def test_adicionar_tag_nao_atualiza_a_tela_se_o_objeto_atual_mudou_no_meio(
+        self,
+    ) -> None:
+        view = object.__new__(ObjetoView)
+        view._objeto_id_atual = 1
+        view._tag_controller = Mock(
+            adicionar_tag=Mock(
+                return_value=ResultadoAdicionarTag(
+                    sucesso=True, tag=Tag(id=1, nome="python")
+                )
+            )
+        )
+        view.mostrar_objeto = Mock()
+        entrada = Mock(get=Mock(return_value="python"))
+
+        with patch(
+            "views.objeto_view.executar_em_segundo_plano",
+            side_effect=self._executar_sincronamente_e_trocar_objeto(view, 2),
+        ):
+            view._adicionar_tag(entrada)
+
+        view.mostrar_objeto.assert_not_called()
+
+    def test_remover_tag_atualiza_a_tela_quando_objeto_atual_nao_mudou(self) -> None:
+        view = object.__new__(ObjetoView)
+        view._objeto_id_atual = 1
+        view._tag_controller = Mock(remover_tag=Mock(return_value=None))
+        view.mostrar_objeto = Mock()
+
+        with patch(
+            "views.objeto_view.executar_em_segundo_plano",
+            side_effect=self._executar_sincronamente,
+        ):
+            view._remover_tag(42)
+
+        view._tag_controller.remover_tag.assert_called_once_with(1, 42)
+        view.mostrar_objeto.assert_called_once_with(1)
+
+    def test_remover_tag_nao_atualiza_a_tela_se_o_objeto_atual_mudou_no_meio(
+        self,
+    ) -> None:
+        view = object.__new__(ObjetoView)
+        view._objeto_id_atual = 1
+        view._tag_controller = Mock(remover_tag=Mock(return_value=None))
+        view.mostrar_objeto = Mock()
+
+        with patch(
+            "views.objeto_view.executar_em_segundo_plano",
+            side_effect=self._executar_sincronamente_e_trocar_objeto(view, 2),
+        ):
+            view._remover_tag(42)
+
+        view.mostrar_objeto.assert_not_called()
+
+    def test_falha_inesperada_ao_alterar_tag_mostra_mensagem_de_erro(self) -> None:
+        view = object.__new__(ObjetoView)
+        view._objeto_id_atual = 1
+        view._tag_controller = Mock(
+            adicionar_tag=Mock(side_effect=RuntimeError("falha simulada"))
+        )
+        view.mostrar_objeto = Mock()
+        entrada = Mock(get=Mock(return_value="python"))
+
+        def fake_executar(master, tarefa, ao_concluir, ao_falhar=None):
+            try:
+                resultado = tarefa()
+            except Exception as erro:  # noqa: BLE001 - mesmo padrao do modulo real
+                ao_falhar(erro)
+            else:
+                ao_concluir(resultado)
+
+        with (
+            patch("views.objeto_view.executar_em_segundo_plano", side_effect=fake_executar),
+            patch("views.objeto_view.messagebox.showerror") as mostrar_erro,
+        ):
+            view._adicionar_tag(entrada)
+
+        mostrar_erro.assert_called_once()
+        view.mostrar_objeto.assert_not_called()
 
 
 if __name__ == "__main__":

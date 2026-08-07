@@ -4,3 +4,4 @@ pypdf
 openpyxl
 python-docx
 sentence-transformers
+Pillow

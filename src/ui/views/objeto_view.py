@@ -21,8 +21,10 @@ import customtkinter as ctk
 
 from controllers.editor_markdown_controller import TIPOS_EDITAVEIS
 from controllers.objeto_controller import ObjetoController
-from controllers.tag_controller import TagController
+from controllers.tag_controller import ResultadoAdicionarTag, TagController
 from models import Objeto, Tag
+from tarefas_segundo_plano import executar_em_segundo_plano
+from widgets.miniatura_imagem import MiniaturaImagem
 from widgets.resultado_item import ResultadoItem
 from widgets.tag_chip import TagChip
 
@@ -143,10 +145,19 @@ class ObjetoView(ctk.CTkScrollableFrame):
         self._renderizar_tags_e_entrada(tags_frame, detalhe.tags)
         linha += 1
 
+        if detalhe.objeto.tipo == "Imagem":
+            MiniaturaImagem(self, detalhe.objeto.caminho).grid(
+                row=linha, column=0, sticky="w", padx=16, pady=(0, 16)
+            )
+            linha += 1
+
         if detalhe.objeto.resumo:
+            rotulo_resumo = (
+                "Descrição" if detalhe.objeto.tipo == "Imagem" else "Resumo"
+            )
             ctk.CTkLabel(
                 self,
-                text="Resumo",
+                text=rotulo_resumo,
                 font=ctk.CTkFont(size=12, weight="bold"),
                 text_color="gray60",
                 anchor="w",
@@ -240,18 +251,61 @@ class ObjetoView(ctk.CTkScrollableFrame):
         entrada.bind("<Return>", lambda evento: self._adicionar_tag(entrada))
 
     def _adicionar_tag(self, entrada: ctk.CTkEntry) -> None:
+        """Roda em segundo plano: associar uma tag agora pode disparar
+        reindexacao semantica (modelo de IA), lento o bastante para
+        travar a janela se rodasse na thread principal -- mesmo padrao
+        de EditorMarkdownWindow._salvar e PesquisaView.pesquisar.
+
+        O texto e lido do CTkEntry ANTES de entrar na tarefa de segundo
+        plano (widgets do Tkinter so podem ser lidos na thread
+        principal), e o objeto_id em foco tambem e capturado antes --
+        ver _ao_terminar_adicionar_tag para o motivo.
+        """
         if self._objeto_id_atual is None:
             return
+        objeto_id = self._objeto_id_atual
         nome = entrada.get()
-        resultado = self._tag_controller.adicionar_tag(self._objeto_id_atual, nome)
-        if resultado.sucesso:
-            self.mostrar_objeto(self._objeto_id_atual)
+        executar_em_segundo_plano(
+            self,
+            lambda: self._tag_controller.adicionar_tag(objeto_id, nome),
+            ao_concluir=lambda resultado: self._ao_terminar_adicionar_tag(
+                objeto_id, resultado
+            ),
+            ao_falhar=self._ao_falhar_alterar_tag,
+        )
+
+    def _ao_terminar_adicionar_tag(
+        self, objeto_id: int, resultado: ResultadoAdicionarTag
+    ) -> None:
+        """So recarrega a tela se o usuario ainda estiver olhando para o
+        mesmo objeto que originou a chamada -- como a operacao agora e
+        assincrona, o usuario pode selecionar outro objeto enquanto a
+        tag ainda esta sendo processada, e recarregar sem essa checagem
+        mostraria o objeto errado."""
+        if resultado.sucesso and self._objeto_id_atual == objeto_id:
+            self.mostrar_objeto(objeto_id)
 
     def _remover_tag(self, tag_id: int) -> None:
+        """Mesmo motivo de _adicionar_tag: desassociar uma tag agora
+        tambem reindexa em segundo plano."""
         if self._objeto_id_atual is None:
             return
-        self._tag_controller.remover_tag(self._objeto_id_atual, tag_id)
-        self.mostrar_objeto(self._objeto_id_atual)
+        objeto_id = self._objeto_id_atual
+        executar_em_segundo_plano(
+            self,
+            lambda: self._tag_controller.remover_tag(objeto_id, tag_id),
+            ao_concluir=lambda _resultado: self._ao_terminar_remover_tag(objeto_id),
+            ao_falhar=self._ao_falhar_alterar_tag,
+        )
+
+    def _ao_terminar_remover_tag(self, objeto_id: int) -> None:
+        """Mesma guarda contra condicao de corrida de
+        _ao_terminar_adicionar_tag."""
+        if self._objeto_id_atual == objeto_id:
+            self.mostrar_objeto(objeto_id)
+
+    def _ao_falhar_alterar_tag(self, erro: Exception) -> None:
+        messagebox.showerror("Erro inesperado ao alterar tags", str(erro))
 
     def _excluir(self, objeto_id: int) -> None:
         """Move o objeto para a lixeira e limpa o painel, ja que o

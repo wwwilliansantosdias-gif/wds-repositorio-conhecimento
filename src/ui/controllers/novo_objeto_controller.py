@@ -106,6 +106,33 @@ class NovoObjetoController:
                 mensagem_erro=f"Nao foi possivel importar a planilha: {erro}",
             )
 
+    def importar_imagem(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+        descricao: str | None = None,
+    ) -> ResultadoCriacao:
+        """Importa uma imagem e converte falhas em um resultado uniforme."""
+        try:
+            objeto = self._importacao_service.importar_imagem(
+                caminho_arquivo, titulo=titulo, descricao=descricao
+            )
+            return ResultadoCriacao(sucesso=True, objeto=objeto)
+        except DuplicataError as erro:
+            return ResultadoCriacao(sucesso=False, mensagem_erro=str(erro))
+        except FileNotFoundError:
+            return ResultadoCriacao(
+                sucesso=False, mensagem_erro="Arquivo nao encontrado."
+            )
+        except ValueError as erro:
+            return ResultadoCriacao(sucesso=False, mensagem_erro=str(erro))
+        except Exception as erro:
+            return ResultadoCriacao(
+                sucesso=False,
+                mensagem_erro=f"Nao foi possivel importar a imagem: {erro}",
+            )
+
     def importar_markdown(
         self,
         caminho_arquivo: str | Path,

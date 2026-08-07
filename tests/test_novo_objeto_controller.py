@@ -19,6 +19,7 @@ from services.acervo_service import AcervoService
 from services.importacao_service import ImportacaoService
 from services.objeto_service import ObjetoService
 from openpyxl import Workbook
+from PIL import Image
 
 from controllers.novo_objeto_controller import NovoObjetoController
 
@@ -51,10 +52,12 @@ class NovoObjetoControllerTests(unittest.TestCase):
 
         self.pasta_notas = temporary_path / "acervo" / "notas"
         self.pasta_planilhas = temporary_path / "acervo" / "planilhas"
+        self.pasta_imagens = temporary_path / "acervo" / "imagens"
         self.importacao_service = ImportacaoService(
             self.acervo_service,
             pasta_notas=self.pasta_notas,
             pasta_planilhas=self.pasta_planilhas,
+            pasta_imagens=self.pasta_imagens,
         )
         self.controller = NovoObjetoController(self.importacao_service)
 
@@ -135,6 +138,42 @@ class NovoObjetoControllerTests(unittest.TestCase):
             self.assertTrue(
                 (self.pasta_planilhas / f"{resultado.objeto.id}.xlsx").is_file()
             )
+
+    def test_importar_imagem_com_sucesso(self) -> None:
+        with TemporaryDirectory() as origem_dir:
+            arquivo = Path(origem_dir) / "foto.png"
+            Image.new("RGB", (10, 10), color="green").save(arquivo)
+
+            resultado = self.controller.importar_imagem(
+                arquivo, descricao="Uma folha verde sobre fundo branco."
+            )
+
+            self.assertTrue(resultado.sucesso)
+            self.assertEqual(resultado.objeto.tipo, "Imagem")
+            self.assertEqual(
+                resultado.objeto.resumo, "Uma folha verde sobre fundo branco."
+            )
+            self.assertTrue(
+                (self.pasta_imagens / f"{resultado.objeto.id}.png").is_file()
+            )
+
+    def test_importar_imagem_sem_descricao_retorna_erro_tratado(self) -> None:
+        with TemporaryDirectory() as origem_dir:
+            arquivo = Path(origem_dir) / "foto.png"
+            Image.new("RGB", (10, 10), color="green").save(arquivo)
+
+            resultado = self.controller.importar_imagem(arquivo)
+
+            self.assertFalse(resultado.sucesso)
+            self.assertIsNotNone(resultado.mensagem_erro)
+
+    def test_importar_imagem_inexistente_retorna_erro_tratado(self) -> None:
+        resultado = self.controller.importar_imagem(
+            "/caminho/que/nao/existe.png", descricao="Descricao qualquer."
+        )
+
+        self.assertFalse(resultado.sucesso)
+        self.assertEqual(resultado.mensagem_erro, "Arquivo nao encontrado.")
 
     def test_resultado_de_erro_nunca_deixa_objeto_criado_pela_metade(self) -> None:
         """Ao falhar, nao deve sobrar nenhum objeto orfao cadastrado."""

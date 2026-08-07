@@ -22,6 +22,7 @@ from services.objeto_service import ObjetoService
 
 from docx import Document as DocumentoDocx
 from openpyxl import Workbook
+from PIL import Image
 
 
 # PDF real (gerado com reportlab), contendo o texto:
@@ -51,12 +52,14 @@ class ImportacaoServiceTests(unittest.TestCase):
         self.pasta_notas = temporary_path / "acervo" / "notas"
         self.pasta_documentos = temporary_path / "acervo" / "documentos"
         self.pasta_planilhas = temporary_path / "acervo" / "planilhas"
+        self.pasta_imagens = temporary_path / "acervo" / "imagens"
         self.importacao_service = ImportacaoService(
             self.acervo_service,
             pasta_pdfs=self.pasta_pdfs,
             pasta_notas=self.pasta_notas,
             pasta_documentos=self.pasta_documentos,
             pasta_planilhas=self.pasta_planilhas,
+            pasta_imagens=self.pasta_imagens,
         )
 
         self.pdf_path = temporary_path / "documento_original.pdf"
@@ -84,6 +87,12 @@ class ImportacaoServiceTests(unittest.TestCase):
         aba.append(["Alimentacao", 350, "=SUM(B2:B2)"])
         aba.append([None, None, None])
         planilha.save(self.planilha_path)
+
+        self.imagem_path = temporary_path / "foto_original.png"
+        Image.new("RGB", (10, 10), color="blue").save(self.imagem_path)
+
+        self.imagem_jpg_path = temporary_path / "foto_original.jpg"
+        Image.new("RGB", (10, 10), color="red").save(self.imagem_jpg_path)
 
     def tearDown(self) -> None:
         del self.embedding_service
@@ -314,6 +323,70 @@ class ImportacaoServiceTests(unittest.TestCase):
 
         with self.assertRaises(DuplicataError):
             self.importacao_service.importar_planilha(self.planilha_path)
+
+    def test_importar_imagem_cadastra_copia_e_indexa_o_objeto(self) -> None:
+        objeto = self.importacao_service.importar_imagem(
+            self.imagem_path,
+            descricao="Foto do por do sol na praia, tons de laranja e roxo.",
+        )
+
+        self.assertEqual(objeto.titulo, "foto_original")
+        self.assertEqual(objeto.tipo, "Imagem")
+        self.assertEqual(
+            objeto.resumo, "Foto do por do sol na praia, tons de laranja e roxo."
+        )
+        self.assertIsNotNone(objeto.hash_arquivo)
+
+        caminho_copiado = self.pasta_imagens / f"{objeto.id}.png"
+        self.assertTrue(caminho_copiado.is_file())
+        self.assertEqual(objeto.caminho, str(caminho_copiado))
+
+        encontrados = self.embedding_service.buscar_semantico(
+            "entardecer colorido a beira-mar"
+        )
+        self.assertTrue(any(item.id == objeto.id for item, _ in encontrados))
+
+    def test_importar_imagem_preserva_a_extensao_original(self) -> None:
+        objeto = self.importacao_service.importar_imagem(
+            self.imagem_jpg_path, descricao="Foto de teste em jpg."
+        )
+
+        caminho_copiado = self.pasta_imagens / f"{objeto.id}.jpg"
+        self.assertTrue(caminho_copiado.is_file())
+        self.assertEqual(objeto.caminho, str(caminho_copiado))
+
+    def test_importar_imagem_usa_titulo_explicito_quando_fornecido(self) -> None:
+        objeto = self.importacao_service.importar_imagem(
+            self.imagem_path,
+            titulo="Meu titulo customizado",
+            descricao="Uma descricao qualquer.",
+        )
+
+        self.assertEqual(objeto.titulo, "Meu titulo customizado")
+
+    def test_importar_imagem_impede_duplicata(self) -> None:
+        self.importacao_service.importar_imagem(
+            self.imagem_path, descricao="Primeira importacao."
+        )
+
+        with self.assertRaises(DuplicataError):
+            self.importacao_service.importar_imagem(
+                self.imagem_path, descricao="Segunda tentativa, mesmo arquivo."
+            )
+
+    def test_importar_imagem_arquivo_inexistente_leva_a_erro_claro(self) -> None:
+        with self.assertRaises(FileNotFoundError):
+            self.importacao_service.importar_imagem(
+                "caminho/que/nao/existe.png", descricao="Descricao qualquer."
+            )
+
+    def test_importar_imagem_rejeita_descricao_vazia(self) -> None:
+        with self.assertRaises(ValueError):
+            self.importacao_service.importar_imagem(self.imagem_path, descricao="   ")
+
+    def test_importar_imagem_rejeita_descricao_ausente(self) -> None:
+        with self.assertRaises(ValueError):
+            self.importacao_service.importar_imagem(self.imagem_path)
 
     def test_cadastrar_link_persiste_e_indexa(self) -> None:
         objeto = self.importacao_service.cadastrar_link(
