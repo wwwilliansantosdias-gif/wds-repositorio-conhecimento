@@ -218,6 +218,17 @@ class ObjetoServiceTests(unittest.TestCase):
         self.assertEqual([objeto.id for objeto in objetos], [primeiro.id, terceiro.id])
         self.assertEqual([objeto.status for objeto in objetos], ["ativo", "ativo"])
 
+    def test_contar_ativos_sem_objetos_retorna_zero(self) -> None:
+        self.assertEqual(self.service.contar_ativos(), 0)
+
+    def test_contar_ativos_conta_apenas_objetos_ativos(self) -> None:
+        primeiro = self.service.cadastrar("Primeiro", "Nota")
+        self.service.cadastrar("Segundo", "Artigo")
+        terceiro = self.service.cadastrar("Terceiro", "Livro")
+        self.service.excluir(terceiro.id)
+
+        self.assertEqual(self.service.contar_ativos(), 2)
+
     def test_listar_lixeira_retorna_objetos_por_exclusao_mais_recente(self) -> None:
         primeiro = self.service.cadastrar("Primeiro", "Nota")
         segundo = self.service.cadastrar("Segundo", "Artigo")

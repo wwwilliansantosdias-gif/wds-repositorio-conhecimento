@@ -132,6 +132,7 @@ class MainWindow(ctk.CTk):
         self.tags_panel = TagsPanel(
             corpo,
             self.tag_controller,
+            self.acervo_service,
             ao_selecionar_tag=self._ao_selecionar_tag,
             width=180,
         )
@@ -188,17 +189,24 @@ class MainWindow(ctk.CTk):
         self.pesquisa_view.listar_todos()
 
     def _ao_criar_objeto(self, objeto_id: int) -> None:
-        """Apos criar um objeto novo, mostra-o em Objeto em Foco.
+        """Apos criar um objeto novo, mostra-o em Objeto em Foco e
+        atualiza o painel de tags -- o contador de objetos e a lista de
+        tags nao devem ficar visivelmente desatualizados logo apos
+        importar ou criar algo, que e o momento em que isso mais
+        chamaria atencao.
 
         O item so aparecera na lista de Resultados quando o usuario
         pesquisar por ele -- a pesquisa continua sendo a ancora, o
         cadastro nao insere resultados fora desse fluxo.
         """
         self.objeto_view.mostrar_objeto(objeto_id)
+        self.tags_panel.atualizar()
 
     def _ao_criar_nota(self, objeto_id: int) -> None:
         """Apos criar uma nota em branco, abre direto o Editor Markdown
-        para o usuario digitar o conteudo."""
+        para o usuario digitar o conteudo, e atualiza o painel de tags
+        (mesmo motivo de _ao_criar_objeto)."""
+        self.tags_panel.atualizar()
         EditorMarkdownWindow(
             self,
             self.editor_markdown_controller,

@@ -107,6 +107,16 @@ class AcervoServiceTests(unittest.TestCase):
         with self.assertRaises(LookupError):
             self.acervo.reindexar_com_contexto_extra(99999, "Tags: qualquer")
 
+    def test_contar_ativos_delega_para_objeto_service(self) -> None:
+        self.acervo.cadastrar("Primeiro", "Nota")
+        segundo = self.acervo.cadastrar("Segundo", "Nota")
+        self.acervo.excluir(segundo.id)
+
+        self.assertEqual(self.acervo.contar_ativos(), 1)
+        self.assertEqual(
+            self.acervo.contar_ativos(), self.objeto_service.contar_ativos()
+        )
+
     def test_excluir_definitivamente_remove_do_indice_semantico(self) -> None:
         objeto = self.acervo.cadastrar(
             "Cachorro", "Nota", resumo="Um animal leal."

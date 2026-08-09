@@ -136,3 +136,6 @@ class AcervoService:
 
     def listar_lixeira(self) -> list[Objeto]:
         return self._objeto_service.listar_lixeira()
+
+    def contar_ativos(self) -> int:
+        return self._objeto_service.contar_ativos()

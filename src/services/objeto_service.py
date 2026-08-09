@@ -148,6 +148,20 @@ class ObjetoService(BaseService):
 
         return [Objeto(**dict(row)) for row in rows]
 
+    def contar_ativos(self) -> int:
+        """Conta objetos ativos direto no banco, sem carregar a lista
+        inteira -- fica lento a medida que o acervo cresce."""
+        with self.database.connection() as connection:
+            linha = connection.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM tabela_objetos
+                WHERE status = 'ativo'
+                """
+            ).fetchone()
+
+        return linha["total"]
+
     def listar_lixeira(self) -> list[Objeto]:
         """Lista objetos na lixeira do mais recentemente excluído ao mais antigo."""
         with self.database.connection() as connection:

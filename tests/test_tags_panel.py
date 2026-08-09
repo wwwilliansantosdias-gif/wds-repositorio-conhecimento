@@ -21,10 +21,11 @@ from widgets.tags_panel import TagsPanel
 
 class TagsPanelTests(unittest.TestCase):
     def _atualizar_e_capturar(
-        self, tags: list[Tag]
+        self, tags: list[Tag], total_ativos: int = 0
     ) -> tuple[list[dict[str, object]], list[dict[str, object]], Mock]:
         panel = object.__new__(TagsPanel)
         panel._tag_controller = Mock(listar_todas=Mock(return_value=tags))
+        panel._acervo_service = Mock(contar_ativos=Mock(return_value=total_ativos))
         panel._ao_selecionar_tag = Mock()
         panel.winfo_children = Mock(return_value=[])
 
@@ -43,6 +44,7 @@ class TagsPanelTests(unittest.TestCase):
 
         with (
             patch("widgets.tags_panel.ctk.CTkLabel", side_effect=criar_label),
+            patch("widgets.tags_panel.ctk.CTkFont"),
             patch("widgets.tags_panel.TagChip", side_effect=criar_chip),
         ):
             panel.atualizar()
@@ -69,8 +71,10 @@ class TagsPanelTests(unittest.TestCase):
         labels_criados, chips_criados, _ = self._atualizar_e_capturar([])
 
         self.assertEqual(chips_criados, [])
-        self.assertEqual(len(labels_criados), 1)
-        self.assertEqual(labels_criados[0]["text"], "Nenhuma tag cadastrada ainda.")
+        # Um label e sempre criado (o contador); com lista vazia de tags,
+        # o segundo label e a mensagem de estado vazio.
+        self.assertEqual(len(labels_criados), 2)
+        self.assertEqual(labels_criados[1]["text"], "Nenhuma tag cadastrada ainda.")
 
     def test_painel_nao_oferece_nenhuma_acao_de_exclusao(self) -> None:
         tags = [Tag(id=1, nome="python")]
@@ -78,6 +82,45 @@ class TagsPanelTests(unittest.TestCase):
         _, chips_criados, _ = self._atualizar_e_capturar(tags)
 
         self.assertIsNone(chips_criados[0]["ao_remover"])
+
+    def test_contador_exibe_o_total_de_objetos_ativos(self) -> None:
+        labels_criados, _, _ = self._atualizar_e_capturar([], total_ativos=42)
+
+        self.assertEqual(labels_criados[0]["text"], "42 objetos no acervo")
+
+    def test_contador_usa_singular_para_um_objeto(self) -> None:
+        labels_criados, _, _ = self._atualizar_e_capturar([], total_ativos=1)
+
+        self.assertEqual(labels_criados[0]["text"], "1 objeto no acervo")
+
+    def test_contador_usa_plural_para_zero_objetos(self) -> None:
+        labels_criados, _, _ = self._atualizar_e_capturar([], total_ativos=0)
+
+        self.assertEqual(labels_criados[0]["text"], "0 objetos no acervo")
+
+    def test_atualizar_recarrega_o_contador_ao_ser_chamado_de_novo(self) -> None:
+        panel = object.__new__(TagsPanel)
+        panel._tag_controller = Mock(listar_todas=Mock(return_value=[]))
+        panel._acervo_service = Mock(contar_ativos=Mock(return_value=5))
+        panel._ao_selecionar_tag = Mock()
+        panel.winfo_children = Mock(return_value=[])
+
+        labels_criados: list[dict[str, object]] = []
+
+        def criar_label(*args: object, **kwargs: object) -> Mock:
+            labels_criados.append(kwargs)
+            return Mock()
+
+        with (
+            patch("widgets.tags_panel.ctk.CTkLabel", side_effect=criar_label),
+            patch("widgets.tags_panel.ctk.CTkFont"),
+        ):
+            panel.atualizar()
+            panel._acervo_service.contar_ativos.return_value = 6
+            panel.atualizar()
+
+        self.assertEqual(labels_criados[0]["text"], "5 objetos no acervo")
+        self.assertEqual(labels_criados[2]["text"], "6 objetos no acervo")
 
 
 if __name__ == "__main__":
