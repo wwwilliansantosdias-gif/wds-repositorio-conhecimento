@@ -38,6 +38,7 @@ from controllers.lixeira_controller import LixeiraController
 from controllers.novo_objeto_controller import NovoObjetoController
 from controllers.objeto_controller import ObjetoController
 from controllers.pesquisa_controller import PesquisaController
+from controllers.relacao_controller import RelacaoController
 from controllers.tag_controller import TagController
 
 from views.objeto_view import ObjetoView
@@ -93,6 +94,11 @@ class MainWindow(ctk.CTk):
             self.embedding_service,
         )
         self.novo_objeto_controller = NovoObjetoController(self.importacao_service)
+        self.relacao_controller = RelacaoController(
+            self.relacao_service,
+            self.pesquisa_service,
+            self.novo_objeto_controller,
+        )
         self.editor_markdown_controller = EditorMarkdownController(
             self.acervo_service
         )

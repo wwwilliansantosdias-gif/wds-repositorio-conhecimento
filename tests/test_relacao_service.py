@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import sqlite3
 import sys
 from tempfile import TemporaryDirectory
 import unittest
@@ -71,13 +70,26 @@ class RelacaoServiceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "auto-relação não é permitida"):
             self.service.criar(999, 999, "referencia")
 
-    def test_criar_impede_relacao_duplicada(self) -> None:
+    def test_criar_relacao_duplicada_retorna_erro_tratado(self) -> None:
         origem = self.objeto_service.cadastrar("Nota", "Pensamento")
         destino = self.objeto_service.cadastrar("Artigo", "Texto")
         self.service.criar(origem.id, destino.id, "referencia")
 
-        with self.assertRaises(sqlite3.IntegrityError):
+        with self.assertRaisesRegex(ValueError, "existe"):
             self.service.criar(origem.id, destino.id, "referencia")
+
+    def test_listar_tipos_distintos_retorna_lista_vazia_sem_relacoes(self) -> None:
+        self.assertEqual(self.service.listar_tipos_distintos(), [])
+
+    def test_listar_tipos_distintos_remove_repetidos_e_ordena(self) -> None:
+        primeiro = self.objeto_service.cadastrar("Primeiro", "Nota")
+        segundo = self.objeto_service.cadastrar("Segundo", "Nota")
+        terceiro = self.objeto_service.cadastrar("Terceiro", "Nota")
+        self.service.criar(primeiro.id, segundo.id, "zeta")
+        self.service.criar(primeiro.id, terceiro.id, "alfa")
+        self.service.criar(segundo.id, terceiro.id, "zeta")
+
+        self.assertEqual(self.service.listar_tipos_distintos(), ["alfa", "zeta"])
 
     def test_remover_exclui_apenas_a_relacao_informada(self) -> None:
         origem = self.objeto_service.cadastrar("Nota", "Pensamento")

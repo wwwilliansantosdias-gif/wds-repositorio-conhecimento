@@ -11,6 +11,19 @@ from services.base import BaseService
 class RelacaoService(BaseService):
     """Coordena a gravação e consulta de relações no SQLite."""
 
+    def listar_tipos_distintos(self) -> list[str]:
+        """Lista os tipos de relação já usados em ordem alfabética."""
+        with self.database.connection() as connection:
+            rows = connection.execute(
+                """
+                SELECT DISTINCT tipo_relacao
+                FROM tabela_relacoes
+                ORDER BY tipo_relacao
+                """
+            ).fetchall()
+
+        return [row["tipo_relacao"] for row in rows]
+
     def criar(self, origem: int, destino: int, tipo_relacao: str) -> Relacao:
         """Cria uma relação entre dois objetos existentes."""
         if origem == destino:
@@ -32,7 +45,10 @@ class RelacaoService(BaseService):
                         "objeto de origem ou destino não encontrado: "
                         f"origem={origem}, destino={destino}"
                     ) from error
-                raise
+                raise ValueError(
+                    f"relação já existe: origem={origem}, destino={destino}, "
+                    f"tipo={tipo_relacao}"
+                ) from error
 
         return Relacao(origem=origem, destino=destino, tipo_relacao=tipo_relacao)
 
