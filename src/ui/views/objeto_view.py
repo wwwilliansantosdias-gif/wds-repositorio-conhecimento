@@ -21,10 +21,12 @@ import customtkinter as ctk
 
 from controllers.editor_markdown_controller import TIPOS_EDITAVEIS
 from controllers.objeto_controller import ObjetoController
+from controllers.relacao_controller import RelacaoController
 from controllers.tag_controller import ResultadoAdicionarTag, TagController
 from models import Objeto, Tag
 from tarefas_segundo_plano import executar_em_segundo_plano
 from widgets.miniatura_imagem import MiniaturaImagem
+from widgets.criar_relacionamento import CriarRelacionamento
 from widgets.resultado_item import ResultadoItem
 from widgets.tag_chip import TagChip
 
@@ -39,6 +41,7 @@ class ObjetoView(ctk.CTkScrollableFrame):
         master: Any,
         objeto_controller: ObjetoController,
         tag_controller: TagController,
+        relacao_controller: RelacaoController,
         ao_selecionar_objeto: Callable[[int], None],
         ao_selecionar_tag: Callable[[str], None],
         ao_editar_objeto: Callable[[int], None],
@@ -47,6 +50,7 @@ class ObjetoView(ctk.CTkScrollableFrame):
         super().__init__(master, fg_color="transparent", **kwargs)
         self._objeto_controller = objeto_controller
         self._tag_controller = tag_controller
+        self._relacao_controller = relacao_controller
         self._ao_selecionar_objeto = ao_selecionar_objeto
         self._ao_selecionar_tag = ao_selecionar_tag
         self._ao_editar_objeto = ao_editar_objeto
@@ -128,6 +132,15 @@ class ObjetoView(ctk.CTkScrollableFrame):
             font=ctk.CTkFont(size=11),
             command=lambda: self._excluir(objeto_id),
         ).grid(row=0, column=coluna_acao, sticky="e")
+        coluna_acao += 1
+
+        if getattr(self, "_relacao_controller", None) is not None:
+            CriarRelacionamento(
+                cabecalho_frame,
+                self._relacao_controller,
+                objeto_id,
+                ao_criar_relacao=self._ao_criar_relacao,
+            ).grid(row=0, column=coluna_acao, sticky="e", padx=(8, 0))
         linha += 1
 
         ctk.CTkLabel(
@@ -306,6 +319,11 @@ class ObjetoView(ctk.CTkScrollableFrame):
 
     def _ao_falhar_alterar_tag(self, erro: Exception) -> None:
         messagebox.showerror("Erro inesperado ao alterar tags", str(erro))
+
+    def _ao_criar_relacao(self, origem_id: int) -> None:
+        """Recarrega somente se o objeto que iniciou a operação ainda está em foco."""
+        if self._objeto_id_atual == origem_id:
+            self.mostrar_objeto(origem_id)
 
     def _excluir(self, objeto_id: int) -> None:
         """Move o objeto para a lixeira e limpa o painel, ja que o

@@ -156,6 +156,7 @@ class MainWindow(ctk.CTk):
             corpo,
             self.objeto_controller,
             self.tag_controller,
+            self.relacao_controller,
             ao_selecionar_objeto=self._ao_selecionar_objeto,
             ao_selecionar_tag=self._ao_selecionar_tag,
             ao_editar_objeto=self._ao_editar_objeto,
