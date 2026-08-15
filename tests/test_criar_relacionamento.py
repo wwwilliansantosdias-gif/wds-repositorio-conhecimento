@@ -147,6 +147,29 @@ class CriarRelacionamentoTests(unittest.TestCase):
             widget._relacao_controller.criar.return_value
         )
 
+    def test_confirmar_usa_tarefa_em_segundo_plano_para_novo_objeto(self) -> None:
+        widget = self._widget_sem_tk()
+        widget._criar_novo = True
+        widget._termo_busca = "Nova nota"
+        widget._combo_tipo = Mock(get=Mock(return_value="referência"))
+        widget._ao_terminar_criacao = Mock()
+
+        def executar_sincronamente(master, tarefa, ao_concluir, ao_falhar):
+            ao_concluir(tarefa())
+
+        with patch(
+            "widgets.criar_relacionamento.executar_em_segundo_plano",
+            side_effect=executar_sincronamente,
+        ):
+            widget._confirmar()
+
+        widget._relacao_controller.criar_objeto_e_relacionar.assert_called_once_with(
+            1, "Nova nota", "referência"
+        )
+        widget._ao_terminar_criacao.assert_called_once_with(
+            widget._relacao_controller.criar_objeto_e_relacionar.return_value
+        )
+
     def test_troca_de_objeto_nao_recarrega_tela_errada(self) -> None:
         view = object.__new__(ObjetoView)
         view._objeto_id_atual = 2
