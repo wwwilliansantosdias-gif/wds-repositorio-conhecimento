@@ -55,6 +55,7 @@ class ObjetoView(ctk.CTkScrollableFrame):
         self._ao_selecionar_tag = ao_selecionar_tag
         self._ao_editar_objeto = ao_editar_objeto
         self._objeto_id_atual: int | None = None
+        self._sugestoes_expandido = False
 
         self.grid_columnconfigure(0, weight=1)
 
@@ -72,6 +73,8 @@ class ObjetoView(ctk.CTkScrollableFrame):
 
     def mostrar_objeto(self, objeto_id: int) -> None:
         """Carrega e exibe os detalhes de um objeto especifico."""
+        if getattr(self, "_objeto_id_atual", None) != objeto_id:
+            self._sugestoes_expandido = False
         try:
             detalhe = self._objeto_controller.carregar_detalhe(objeto_id)
         except LookupError:
@@ -202,6 +205,7 @@ class ObjetoView(ctk.CTkScrollableFrame):
             linha,
             titulo="Sugestões Semânticas",
             objetos_com_score=[(s.objeto, s.score) for s in detalhe.sugestoes],
+            limite_padrao=3,
             mensagem_vazio="Nenhuma sugestão encontrada.",
         )
 
@@ -211,6 +215,7 @@ class ObjetoView(ctk.CTkScrollableFrame):
         titulo: str,
         objetos_com_score: list[tuple[Objeto, float | None]],
         mensagem_vazio: str,
+        limite_padrao: int | None = None,
     ) -> int:
         ctk.CTkLabel(
             self,
@@ -227,7 +232,17 @@ class ObjetoView(ctk.CTkScrollableFrame):
             ).grid(row=linha, column=0, sticky="w", padx=16, pady=(0, 8))
             return linha + 1
 
-        for objeto, score in objetos_com_score:
+        objetos_exibidos = objetos_com_score
+        quantidade_oculta = 0
+        if (
+            limite_padrao is not None
+            and not getattr(self, "_sugestoes_expandido", False)
+            and len(objetos_com_score) > limite_padrao
+        ):
+            objetos_exibidos = objetos_com_score[:limite_padrao]
+            quantidade_oculta = len(objetos_com_score) - limite_padrao
+
+        for objeto, score in objetos_exibidos:
             tags = self._tag_controller.listar_por_objeto(objeto.id)
             item = ResultadoItem(
                 self,
@@ -239,7 +254,24 @@ class ObjetoView(ctk.CTkScrollableFrame):
             item.grid(row=linha, column=0, sticky="ew", padx=16, pady=(0, 8))
             linha += 1
 
+        if quantidade_oculta:
+            ctk.CTkButton(
+                self,
+                text=f"Ver mais ({quantidade_oculta})",
+                fg_color="transparent",
+                hover_color="gray40",
+                text_color="#4FA9A0",
+                anchor="w",
+                command=self._expandir_sugestoes,
+            ).grid(row=linha, column=0, sticky="w", padx=16, pady=(0, 8))
+            linha += 1
+
         return linha
+
+    def _expandir_sugestoes(self) -> None:
+        self._sugestoes_expandido = True
+        if self._objeto_id_atual is not None:
+            self.mostrar_objeto(self._objeto_id_atual)
 
     def _renderizar_tags_e_entrada(
         self,

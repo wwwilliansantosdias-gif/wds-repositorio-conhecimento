@@ -296,6 +296,76 @@ class ObjetoViewTests(unittest.TestCase):
         self.assertIn("Descrição", textos)
         self.assertNotIn("Resumo", textos)
 
+    def _renderizar_contexto_teste(
+        self,
+        quantidade: int,
+        limite_padrao: int | None,
+        expandido: bool = False,
+    ) -> tuple[list[Mock], list[dict[str, object]]]:
+        view = object.__new__(ObjetoView)
+        view._tag_controller = Mock(listar_por_objeto=Mock(return_value=[]))
+        view._ao_selecionar_objeto = Mock()
+        view._sugestoes_expandido = expandido
+        objetos = [self._criar_objeto("Nota", "", f"Resumo {indice}") for indice in range(quantidade)]
+        itens: list[Mock] = []
+        botoes: list[dict[str, object]] = []
+
+        def criar_item(*args: object, **kwargs: object) -> Mock:
+            item = Mock()
+            item.grid = Mock()
+            itens.append(item)
+            return item
+
+        def criar_botao(*args: object, **kwargs: object) -> Mock:
+            botoes.append(kwargs)
+            return Mock(grid=Mock())
+
+        with (
+            patch("views.objeto_view.ctk.CTkLabel", return_value=Mock(grid=Mock())),
+            patch("views.objeto_view.ctk.CTkButton", side_effect=criar_botao),
+            patch("views.objeto_view.ctk.CTkFont"),
+            patch("views.objeto_view.ResultadoItem", side_effect=criar_item),
+        ):
+            view._renderizar_secao_contexto(
+                0,
+                "Sugestoes",
+                [(objeto, 80.0) for objeto in objetos],
+                "Nenhuma",
+                limite_padrao=limite_padrao,
+            )
+
+        return itens, botoes
+
+    def test_sugestoes_com_mais_de_tres_mostra_tres_e_ver_mais(self) -> None:
+        itens, botoes = self._renderizar_contexto_teste(5, 3)
+
+        self.assertEqual(len(itens), 3)
+        self.assertEqual([botao["text"] for botao in botoes], ["Ver mais (2)"])
+
+    def test_sugestoes_com_tres_ou_menos_nao_mostra_ver_mais(self) -> None:
+        for quantidade in (0, 1, 3):
+            with self.subTest(quantidade=quantidade):
+                itens, botoes = self._renderizar_contexto_teste(quantidade, 3)
+                self.assertEqual(len(itens), quantidade)
+                self.assertFalse(botoes)
+
+    def test_ver_mais_expande_sugestoes_para_lista_completa(self) -> None:
+        view = object.__new__(ObjetoView)
+        view._objeto_id_atual = 42
+        view._sugestoes_expandido = False
+        view.mostrar_objeto = Mock()
+
+        view._expandir_sugestoes()
+
+        self.assertTrue(view._sugestoes_expandido)
+        view.mostrar_objeto.assert_called_once_with(42)
+
+    def test_relacionamentos_nao_sao_limitados(self) -> None:
+        itens, botoes = self._renderizar_contexto_teste(5, None)
+
+        self.assertEqual(len(itens), 5)
+        self.assertFalse(botoes)
+
     @staticmethod
     def _executar_sincronamente_e_trocar_objeto(view: ObjetoView, novo_objeto_id: int):
         """Fake de executar_em_segundo_plano: roda a tarefa e chama
