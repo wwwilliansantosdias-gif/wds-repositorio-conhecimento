@@ -53,6 +53,8 @@ class ImportacaoServiceTests(unittest.TestCase):
         self.pasta_documentos = temporary_path / "acervo" / "documentos"
         self.pasta_planilhas = temporary_path / "acervo" / "planilhas"
         self.pasta_imagens = temporary_path / "acervo" / "imagens"
+        self.pasta_audio = temporary_path / "acervo" / "audio"
+        self.pasta_videos = temporary_path / "acervo" / "videos"
         self.importacao_service = ImportacaoService(
             self.acervo_service,
             pasta_pdfs=self.pasta_pdfs,
@@ -60,6 +62,8 @@ class ImportacaoServiceTests(unittest.TestCase):
             pasta_documentos=self.pasta_documentos,
             pasta_planilhas=self.pasta_planilhas,
             pasta_imagens=self.pasta_imagens,
+            pasta_audio=self.pasta_audio,
+            pasta_videos=self.pasta_videos,
         )
 
         self.pdf_path = temporary_path / "documento_original.pdf"
@@ -93,6 +97,11 @@ class ImportacaoServiceTests(unittest.TestCase):
 
         self.imagem_jpg_path = temporary_path / "foto_original.jpg"
         Image.new("RGB", (10, 10), color="red").save(self.imagem_jpg_path)
+
+        self.audio_path = temporary_path / "gravacao_original.m4a"
+        self.audio_path.write_bytes(b"audio de teste")
+        self.video_path = temporary_path / "filmagem_original.mkv"
+        self.video_path.write_bytes(b"video de teste")
 
     def tearDown(self) -> None:
         del self.embedding_service
@@ -387,6 +396,46 @@ class ImportacaoServiceTests(unittest.TestCase):
     def test_importar_imagem_rejeita_descricao_ausente(self) -> None:
         with self.assertRaises(ValueError):
             self.importacao_service.importar_imagem(self.imagem_path)
+
+    def test_importar_audio_cadastra_copia_e_preserva_extensao(self) -> None:
+        objeto = self.importacao_service.importar_audio(
+            self.audio_path, descricao="Gravacao de uma entrevista."
+        )
+
+        self.assertEqual(objeto.tipo, "Audio")
+        self.assertEqual(objeto.resumo, "Gravacao de uma entrevista.")
+        self.assertEqual(objeto.caminho, str(self.pasta_audio / f"{objeto.id}.m4a"))
+        self.assertTrue((self.pasta_audio / f"{objeto.id}.m4a").is_file())
+
+    def test_importar_audio_rejeita_descricao_vazia_ou_ausente(self) -> None:
+        for descricao in (None, "   "):
+            with self.subTest(descricao=descricao), self.assertRaises(ValueError):
+                self.importacao_service.importar_audio(self.audio_path, descricao=descricao)
+
+    def test_importar_audio_impede_duplicata(self) -> None:
+        self.importacao_service.importar_audio(self.audio_path, descricao="Primeira.")
+        with self.assertRaises(DuplicataError):
+            self.importacao_service.importar_audio(self.audio_path, descricao="Segunda.")
+
+    def test_importar_video_cadastra_copia_e_preserva_extensao(self) -> None:
+        objeto = self.importacao_service.importar_video(
+            self.video_path, descricao="Filmagem de uma apresentacao."
+        )
+
+        self.assertEqual(objeto.tipo, "Video")
+        self.assertEqual(objeto.resumo, "Filmagem de uma apresentacao.")
+        self.assertEqual(objeto.caminho, str(self.pasta_videos / f"{objeto.id}.mkv"))
+        self.assertTrue((self.pasta_videos / f"{objeto.id}.mkv").is_file())
+
+    def test_importar_video_rejeita_descricao_vazia_ou_ausente(self) -> None:
+        for descricao in (None, "   "):
+            with self.subTest(descricao=descricao), self.assertRaises(ValueError):
+                self.importacao_service.importar_video(self.video_path, descricao=descricao)
+
+    def test_importar_video_impede_duplicata(self) -> None:
+        self.importacao_service.importar_video(self.video_path, descricao="Primeira.")
+        with self.assertRaises(DuplicataError):
+            self.importacao_service.importar_video(self.video_path, descricao="Segunda.")
 
     def test_cadastrar_link_persiste_e_indexa(self) -> None:
         objeto = self.importacao_service.cadastrar_link(

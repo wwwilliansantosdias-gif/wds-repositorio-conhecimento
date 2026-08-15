@@ -53,11 +53,15 @@ class NovoObjetoControllerTests(unittest.TestCase):
         self.pasta_notas = temporary_path / "acervo" / "notas"
         self.pasta_planilhas = temporary_path / "acervo" / "planilhas"
         self.pasta_imagens = temporary_path / "acervo" / "imagens"
+        self.pasta_audio = temporary_path / "acervo" / "audio"
+        self.pasta_videos = temporary_path / "acervo" / "videos"
         self.importacao_service = ImportacaoService(
             self.acervo_service,
             pasta_notas=self.pasta_notas,
             pasta_planilhas=self.pasta_planilhas,
             pasta_imagens=self.pasta_imagens,
+            pasta_audio=self.pasta_audio,
+            pasta_videos=self.pasta_videos,
         )
         self.controller = NovoObjetoController(self.importacao_service)
 
@@ -174,6 +178,30 @@ class NovoObjetoControllerTests(unittest.TestCase):
 
         self.assertFalse(resultado.sucesso)
         self.assertEqual(resultado.mensagem_erro, "Arquivo nao encontrado.")
+
+    def test_importar_audio_com_sucesso(self) -> None:
+        with TemporaryDirectory() as origem_dir:
+            arquivo = Path(origem_dir) / "gravacao.wav"
+            arquivo.write_bytes(b"audio de teste")
+            resultado = self.controller.importar_audio(
+                arquivo, descricao="Gravacao de teste."
+            )
+
+        self.assertTrue(resultado.sucesso)
+        self.assertEqual(resultado.objeto.tipo, "Audio")
+        self.assertTrue((self.pasta_audio / f"{resultado.objeto.id}.wav").is_file())
+
+    def test_importar_video_com_sucesso(self) -> None:
+        with TemporaryDirectory() as origem_dir:
+            arquivo = Path(origem_dir) / "filmagem.mp4"
+            arquivo.write_bytes(b"video de teste")
+            resultado = self.controller.importar_video(
+                arquivo, descricao="Filmagem de teste."
+            )
+
+        self.assertTrue(resultado.sucesso)
+        self.assertEqual(resultado.objeto.tipo, "Video")
+        self.assertTrue((self.pasta_videos / f"{resultado.objeto.id}.mp4").is_file())
 
     def test_resultado_de_erro_nunca_deixa_objeto_criado_pela_metade(self) -> None:
         """Ao falhar, nao deve sobrar nenhum objeto orfao cadastrado."""

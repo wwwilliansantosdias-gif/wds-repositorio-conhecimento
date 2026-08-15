@@ -29,6 +29,8 @@ from widgets.dialogo_texto import DialogoTexto
 
 
 EXTENSOES_IMAGEM = frozenset({".png", ".jpg", ".jpeg"})
+EXTENSOES_AUDIO = frozenset({".mp3", ".wav", ".m4a", ".ogg"})
+EXTENSOES_VIDEO = frozenset({".mp4", ".mov", ".avi", ".mkv"})
 
 
 class NovoObjetoMenu:
@@ -64,13 +66,16 @@ class NovoObjetoMenu:
             filetypes=[
                 (
                     "Arquivos suportados",
-                    "*.pdf *.md *.docx *.xlsx *.png *.jpg *.jpeg",
+                    "*.pdf *.md *.docx *.xlsx *.png *.jpg *.jpeg "
+                    "*.mp3 *.wav *.m4a *.ogg *.mp4 *.mov *.avi *.mkv",
                 ),
                 ("PDF", "*.pdf"),
                 ("Markdown", "*.md"),
                 ("Word", "*.docx"),
                 ("Excel", "*.xlsx"),
                 ("Imagem", "*.png *.jpg *.jpeg"),
+                ("Audio", "*.mp3 *.wav *.m4a *.ogg"),
+                ("Video", "*.mp4 *.mov *.avi *.mkv"),
             ],
         )
         if not caminho:
@@ -79,6 +84,12 @@ class NovoObjetoMenu:
         extensao = Path(caminho).suffix.lower()
         if extensao in EXTENSOES_IMAGEM:
             self._importar_imagem(caminho)
+            return
+        if extensao in EXTENSOES_AUDIO:
+            self._importar_midia(caminho, "Audio", self._controller.importar_audio)
+            return
+        if extensao in EXTENSOES_VIDEO:
+            self._importar_midia(caminho, "Video", self._controller.importar_video)
             return
 
         importadores = {
@@ -91,7 +102,7 @@ class NovoObjetoMenu:
         if importar is None:
             messagebox.showerror(
                 "Formato nao suportado",
-                "Selecione um arquivo PDF, Markdown, DOCX, XLSX, PNG ou JPG.",
+                "Selecione um arquivo PDF, Markdown, DOCX, XLSX, imagem, audio ou video.",
             )
             return
         self._executar(lambda: importar(caminho))
@@ -113,6 +124,23 @@ class NovoObjetoMenu:
                 caminho, titulo=titulo, descricao=descricao
             )
         )
+
+    def _importar_midia(
+        self,
+        caminho: str,
+        tipo: str,
+        importar: Callable[..., ResultadoCriacao],
+    ) -> None:
+        """Solicita titulo e descricao de audio ou video."""
+        dialogo = DialogoTexto(
+            self._master, f"Importar {tipo}", ["Titulo (opcional)", "Descricao"]
+        )
+        dados = dialogo.aguardar_resultado()
+        if dados is None:
+            return
+        titulo = dados["Titulo (opcional)"].strip() or None
+        descricao = dados["Descricao"].strip() or None
+        self._executar(lambda: importar(caminho, titulo=titulo, descricao=descricao))
 
     def _cadastrar_link(self) -> None:
         dialogo = DialogoTexto(

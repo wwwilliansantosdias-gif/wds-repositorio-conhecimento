@@ -133,6 +133,60 @@ class NovoObjetoController:
                 mensagem_erro=f"Nao foi possivel importar a imagem: {erro}",
             )
 
+    def importar_audio(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+        descricao: str | None = None,
+    ) -> ResultadoCriacao:
+        """Importa um audio e converte falhas em resultado uniforme."""
+        try:
+            objeto = self._importacao_service.importar_audio(
+                caminho_arquivo, titulo=titulo, descricao=descricao
+            )
+            return ResultadoCriacao(sucesso=True, objeto=objeto)
+        except DuplicataError as erro:
+            return ResultadoCriacao(sucesso=False, mensagem_erro=str(erro))
+        except FileNotFoundError:
+            return ResultadoCriacao(
+                sucesso=False, mensagem_erro="Arquivo nao encontrado."
+            )
+        except ValueError as erro:
+            return ResultadoCriacao(sucesso=False, mensagem_erro=str(erro))
+        except Exception as erro:
+            return ResultadoCriacao(
+                sucesso=False,
+                mensagem_erro=f"Nao foi possivel importar o audio: {erro}",
+            )
+
+    def importar_video(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+        descricao: str | None = None,
+    ) -> ResultadoCriacao:
+        """Importa um video e converte falhas em resultado uniforme."""
+        try:
+            objeto = self._importacao_service.importar_video(
+                caminho_arquivo, titulo=titulo, descricao=descricao
+            )
+            return ResultadoCriacao(sucesso=True, objeto=objeto)
+        except DuplicataError as erro:
+            return ResultadoCriacao(sucesso=False, mensagem_erro=str(erro))
+        except FileNotFoundError:
+            return ResultadoCriacao(
+                sucesso=False, mensagem_erro="Arquivo nao encontrado."
+            )
+        except ValueError as erro:
+            return ResultadoCriacao(sucesso=False, mensagem_erro=str(erro))
+        except Exception as erro:
+            return ResultadoCriacao(
+                sucesso=False,
+                mensagem_erro=f"Nao foi possivel importar o video: {erro}",
+            )
+
     def importar_markdown(
         self,
         caminho_arquivo: str | Path,

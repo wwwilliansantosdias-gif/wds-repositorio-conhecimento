@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import sys
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 import unittest
 
 
@@ -33,6 +33,12 @@ class _ControllerStub:
 
     def importar_markdown(self, caminho: str) -> None:
         pass
+
+    def importar_audio(self, caminho: str, **kwargs: object) -> None:
+        self.caminho_recebido = caminho
+
+    def importar_video(self, caminho: str, **kwargs: object) -> None:
+        self.caminho_recebido = caminho
 
 
 class NovoObjetoMenuTests(unittest.TestCase):
@@ -65,6 +71,36 @@ class NovoObjetoMenuTests(unittest.TestCase):
             menu._importar_arquivo()
 
         self.assertEqual(controller.caminho_recebido, caminho)
+
+    def test_importar_arquivo_audio_rota_para_dialogo(self) -> None:
+        caminho = r"C:\temp\gravacao.mp3"
+        menu = object.__new__(NovoObjetoMenu)
+        menu._controller = _ControllerStub()
+        menu._importar_midia = Mock()
+
+        with patch(
+            "widgets.novo_objeto_menu.filedialog.askopenfilename", return_value=caminho
+        ):
+            menu._importar_arquivo()
+
+        menu._importar_midia.assert_called_once_with(
+            caminho, "Audio", menu._controller.importar_audio
+        )
+
+    def test_importar_arquivo_video_rota_para_dialogo(self) -> None:
+        caminho = r"C:\temp\filmagem.mp4"
+        menu = object.__new__(NovoObjetoMenu)
+        menu._controller = _ControllerStub()
+        menu._importar_midia = Mock()
+
+        with patch(
+            "widgets.novo_objeto_menu.filedialog.askopenfilename", return_value=caminho
+        ):
+            menu._importar_arquivo()
+
+        menu._importar_midia.assert_called_once_with(
+            caminho, "Video", menu._controller.importar_video
+        )
 
 
 if __name__ == "__main__":

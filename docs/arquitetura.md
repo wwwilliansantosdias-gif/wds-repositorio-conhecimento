@@ -102,12 +102,14 @@ wds-repositorio-conhecimento/
 ├── README.md
 ├── sessao.py
 ├── acervo/
+│   ├── audio/
 │   ├── documentos/
 │   ├── imagens/
 │   ├── links/
 │   ├── notas/
 │   ├── planilhas/
-│   └── pdfs/
+│   ├── pdfs/
+│   └── videos/
 ├── backups/
 ├── chroma_db/
 ├── docs/

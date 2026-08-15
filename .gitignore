@@ -16,6 +16,10 @@ acervo/pdfs/*
 !acervo/pdfs/.gitkeep
 acervo/imagens/*
 !acervo/imagens/.gitkeep
+acervo/audio/*
+!acervo/audio/.gitkeep
+acervo/videos/*
+!acervo/videos/.gitkeep
 acervo/notas/*
 !acervo/notas/.gitkeep
 acervo/links/*

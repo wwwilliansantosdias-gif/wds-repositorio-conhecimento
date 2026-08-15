@@ -23,6 +23,8 @@ DEFAULT_PASTA_NOTAS = Path(__file__).resolve().parents[2] / "acervo" / "notas"
 DEFAULT_PASTA_DOCUMENTOS = Path(__file__).resolve().parents[2] / "acervo" / "documentos"
 DEFAULT_PASTA_PLANILHAS = Path(__file__).resolve().parents[2] / "acervo" / "planilhas"
 DEFAULT_PASTA_IMAGENS = Path(__file__).resolve().parents[2] / "acervo" / "imagens"
+DEFAULT_PASTA_AUDIO = Path(__file__).resolve().parents[2] / "acervo" / "audio"
+DEFAULT_PASTA_VIDEOS = Path(__file__).resolve().parents[2] / "acervo" / "videos"
 
 
 class DuplicataError(Exception):
@@ -45,6 +47,8 @@ class ImportacaoService:
         pasta_documentos: Path | str = DEFAULT_PASTA_DOCUMENTOS,
         pasta_planilhas: Path | str = DEFAULT_PASTA_PLANILHAS,
         pasta_imagens: Path | str = DEFAULT_PASTA_IMAGENS,
+        pasta_audio: Path | str = DEFAULT_PASTA_AUDIO,
+        pasta_videos: Path | str = DEFAULT_PASTA_VIDEOS,
     ) -> None:
         self._acervo_service = acervo_service
         self._pasta_pdfs = Path(pasta_pdfs)
@@ -52,6 +56,8 @@ class ImportacaoService:
         self._pasta_documentos = Path(pasta_documentos)
         self._pasta_planilhas = Path(pasta_planilhas)
         self._pasta_imagens = Path(pasta_imagens)
+        self._pasta_audio = Path(pasta_audio)
+        self._pasta_videos = Path(pasta_videos)
 
     def calcular_hash(self, caminho_arquivo: str | Path) -> str:
         """Calcula o hash SHA-256 do conteudo de um arquivo fisico."""
@@ -361,6 +367,80 @@ class ImportacaoService:
             titulo_final,
             "Imagem",
             caminho=str(caminho_definitivo),
+        )
+
+    def importar_audio(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+        descricao: str | None = None,
+    ) -> Objeto:
+        """Importa um audio sem extrair conteudo automaticamente."""
+        caminho_original = Path(caminho_arquivo)
+        if not caminho_original.is_file():
+            raise FileNotFoundError(f"Arquivo nao encontrado: {caminho_original}")
+        if descricao is None or not descricao.strip():
+            raise ValueError(
+                "A descricao nao pode ser vazia: sem transcricao, ela e o unico "
+                "texto pesquisavel do audio."
+            )
+
+        hash_arquivo = self.calcular_hash(caminho_original)
+        self.verificar_duplicata(hash_arquivo)
+        titulo_final = titulo if titulo is not None else caminho_original.stem
+        objeto = self._acervo_service.cadastrar(
+            titulo_final, "Audio", resumo=descricao, hash_arquivo=hash_arquivo
+        )
+
+        try:
+            self._pasta_audio.mkdir(parents=True, exist_ok=True)
+            caminho_definitivo = self._pasta_audio / f"{objeto.id}{caminho_original.suffix.lower()}"
+            shutil.copy2(caminho_original, caminho_definitivo)
+        except Exception:
+            self._acervo_service.excluir(objeto.id)
+            self._acervo_service.excluir_definitivamente(objeto.id)
+            raise
+
+        return self._acervo_service.atualizar(
+            objeto.id, titulo_final, "Audio", caminho=str(caminho_definitivo)
+        )
+
+    def importar_video(
+        self,
+        caminho_arquivo: str | Path,
+        *,
+        titulo: str | None = None,
+        descricao: str | None = None,
+    ) -> Objeto:
+        """Importa um video sem extrair conteudo automaticamente."""
+        caminho_original = Path(caminho_arquivo)
+        if not caminho_original.is_file():
+            raise FileNotFoundError(f"Arquivo nao encontrado: {caminho_original}")
+        if descricao is None or not descricao.strip():
+            raise ValueError(
+                "A descricao nao pode ser vazia: sem transcricao, ela e o unico "
+                "texto pesquisavel do video."
+            )
+
+        hash_arquivo = self.calcular_hash(caminho_original)
+        self.verificar_duplicata(hash_arquivo)
+        titulo_final = titulo if titulo is not None else caminho_original.stem
+        objeto = self._acervo_service.cadastrar(
+            titulo_final, "Video", resumo=descricao, hash_arquivo=hash_arquivo
+        )
+
+        try:
+            self._pasta_videos.mkdir(parents=True, exist_ok=True)
+            caminho_definitivo = self._pasta_videos / f"{objeto.id}{caminho_original.suffix.lower()}"
+            shutil.copy2(caminho_original, caminho_definitivo)
+        except Exception:
+            self._acervo_service.excluir(objeto.id)
+            self._acervo_service.excluir_definitivamente(objeto.id)
+            raise
+
+        return self._acervo_service.atualizar(
+            objeto.id, titulo_final, "Video", caminho=str(caminho_definitivo)
         )
 
     def importar_markdown(
