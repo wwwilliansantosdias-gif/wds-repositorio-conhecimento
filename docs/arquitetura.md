@@ -68,13 +68,13 @@ A mídia é apenas uma característica do objeto, nunca sua definição arquitet
 
 | Camada | Tecnologia |
 |---------|------------|
-| Linguagem | Python 3 |
+| Linguagem | Python 3.14 |
 | Interface | CustomTkinter |
 | Persistência | SQLite |
 | Busca textual | SQLite FTS5 |
 | Busca semântica | ChromaDB |
 | Embeddings | sentence-transformers (modelo multilíngue) |
-| PDF | PyMuPDF |
+| PDF | pypdf (extração de texto) |
 | Texto | Markdown |
 | Configuração | JSON |
 | Processamento assíncrono | threading |
@@ -115,9 +115,8 @@ wds-repositorio-conhecimento/
 ├── docs/
 │   ├── arquitetura.md
 │   ├── interface-grafica.md
-│   ├── roadmap.md
-│   └── docs/
-│       └── issues.md
+│   ├── issues.md
+│   └── roadmap.md
 ├── src/
 │   ├── models/
 │   ├── persistence/

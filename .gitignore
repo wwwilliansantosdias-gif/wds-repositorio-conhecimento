@@ -36,3 +36,6 @@ vetores/*
 !vetores/.gitkeep
 backups/*
 !backups/.gitkeep
+
+# Preferencias pessoais/locais (ex.: tema); o app recria com valores padrao.
+config.json

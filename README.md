@@ -42,7 +42,7 @@ O arquivo `Abrir WDS.bat`, na raiz do projeto, inicia o programa via `pyw`
 clique com o botão direito em `Abrir WDS.bat` → "Enviar para" → "Área de
 trabalho (criar atalho)".
 
-Não há instalador formal (`.exe`) para esta versão -- ver `docs/docs/issues.md`,
+Não há instalador formal (`.exe`) para esta versão -- ver `docs/issues.md`,
 Issue 32, para o motivo dessa decisão.
 
 ## Desenvolvimento e validação
@@ -57,5 +57,5 @@ python -m compileall -q app.py src
 - `AGENTS.md` — regras de desenvolvimento;
 - `docs/arquitetura.md` — arquitetura oficial;
 - `docs/roadmap.md` — sequência oficial de desenvolvimento;
-- `docs/docs/issues.md` — histórico e estado das issues;
+- `docs/issues.md` — histórico e estado das issues;
 - `docs/wds-1.1-planejamento.md` — escopo definido do próximo incremento.

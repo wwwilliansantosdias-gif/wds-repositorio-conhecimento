@@ -226,7 +226,7 @@ Preparar a primeira versão pública do sistema.
 
 - Revisão da documentação
 - Ajustes finais (auditoria de integração entre Toolbar, MainWindow e
-  Controllers -- ver docs/docs/issues.md, Issue 32)
+  Controllers -- ver docs/issues.md, Issue 32)
 - Lançador leve sem terminal (`Abrir WDS.bat` + atalho na Área de
   Trabalho)
 

@@ -1,3 +1,3 @@
 @echo off
-cd /d "C:\Projetos\wds-repositorio-conhecimento"
+cd /d "%~dp0"
 start "" pyw app.py
