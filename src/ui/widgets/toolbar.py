@@ -23,6 +23,15 @@ import customtkinter as ctk
 from widgets.search_bar import SearchBar
 
 
+NEUTRAL_NAVIGATION_COLOR = "gray40"
+NEUTRAL_NAVIGATION_HOVER_COLOR = "gray30"
+
+
+def _acervo_theme_color(name: str) -> list[str]:
+    """Devolve uma cor da identidade carregada no tema do Acervo."""
+    return ctk.ThemeManager.theme["WDS"][name]
+
+
 class Toolbar(ctk.CTkFrame):
     """Compõe a barra superior de navegação do WDS."""
 
@@ -37,7 +46,12 @@ class Toolbar(ctk.CTkFrame):
         ao_clicar_configuracoes: Callable[[], None],
         **kwargs: Any,
     ) -> None:
-        super().__init__(master, corner_radius=0, **kwargs)
+        super().__init__(
+            master,
+            corner_radius=0,
+            fg_color=_acervo_theme_color("accent_fg_color"),
+            **kwargs,
+        )
 
         self.grid_columnconfigure(1, weight=1)
 
@@ -45,6 +59,7 @@ class Toolbar(ctk.CTkFrame):
             self,
             text="WDS",
             font=ctk.CTkFont(size=18, weight="bold"),
+            text_color=_acervo_theme_color("accent_text_color"),
         )
         titulo.grid(row=0, column=0, padx=(16, 24), pady=12)
 
@@ -56,9 +71,9 @@ class Toolbar(ctk.CTkFrame):
             text="Biblioteca",
             width=100,
             height=36,
-            fg_color="gray40",
-            hover_color="gray30",
-            command=ao_clicar_biblioteca,
+            fg_color=NEUTRAL_NAVIGATION_COLOR,
+            hover_color=NEUTRAL_NAVIGATION_HOVER_COLOR,
+            command=lambda: self._acionar_navegacao("biblioteca", ao_clicar_biblioteca),
         )
         self.botao_biblioteca.grid(row=0, column=2, padx=(16, 8), pady=12)
 
@@ -67,9 +82,9 @@ class Toolbar(ctk.CTkFrame):
             text="Lixeira",
             width=90,
             height=36,
-            fg_color="gray40",
-            hover_color="gray30",
-            command=ao_clicar_lixeira,
+            fg_color=NEUTRAL_NAVIGATION_COLOR,
+            hover_color=NEUTRAL_NAVIGATION_HOVER_COLOR,
+            command=lambda: self._acionar_navegacao("lixeira", ao_clicar_lixeira),
         )
         self.botao_lixeira.grid(row=0, column=3, padx=(0, 8), pady=12)
 
@@ -78,9 +93,9 @@ class Toolbar(ctk.CTkFrame):
             text="Backup",
             width=90,
             height=36,
-            fg_color="gray40",
-            hover_color="gray30",
-            command=ao_clicar_backup,
+            fg_color=NEUTRAL_NAVIGATION_COLOR,
+            hover_color=NEUTRAL_NAVIGATION_HOVER_COLOR,
+            command=lambda: self._acionar_navegacao("backup", ao_clicar_backup),
         )
         self.botao_backup.grid(row=0, column=4, padx=(0, 8), pady=12)
 
@@ -89,9 +104,11 @@ class Toolbar(ctk.CTkFrame):
             text="Configurações",
             width=110,
             height=36,
-            fg_color="gray40",
-            hover_color="gray30",
-            command=ao_clicar_configuracoes,
+            fg_color=NEUTRAL_NAVIGATION_COLOR,
+            hover_color=NEUTRAL_NAVIGATION_HOVER_COLOR,
+            command=lambda: self._acionar_navegacao(
+                "configuracoes", ao_clicar_configuracoes
+            ),
         )
         self.botao_configuracoes.grid(row=0, column=5, padx=(0, 8), pady=12)
 
@@ -106,3 +123,28 @@ class Toolbar(ctk.CTkFrame):
             "<Button-1>",
             lambda evento: ao_clicar_novo_objeto(evento.x_root, evento.y_root),
         )
+
+        self._botoes_navegacao = {
+            "biblioteca": self.botao_biblioteca,
+            "lixeira": self.botao_lixeira,
+            "backup": self.botao_backup,
+            "configuracoes": self.botao_configuracoes,
+        }
+
+    def _acionar_navegacao(
+        self, destino: str, acao: Callable[[], None]
+    ) -> None:
+        """Destaca somente o item de navegação acionado."""
+        for nome, botao in self._botoes_navegacao.items():
+            if nome == destino:
+                botao.configure(
+                    fg_color=_acervo_theme_color("accent_fg_color"),
+                    hover_color=_acervo_theme_color("accent_hover_color"),
+                    text_color=_acervo_theme_color("accent_text_color"),
+                )
+            else:
+                botao.configure(
+                    fg_color=NEUTRAL_NAVIGATION_COLOR,
+                    hover_color=NEUTRAL_NAVIGATION_HOVER_COLOR,
+                )
+        acao()

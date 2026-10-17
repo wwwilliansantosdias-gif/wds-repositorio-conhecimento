@@ -17,6 +17,26 @@ escolha deliberada, e o resultado entra como Nota comum.
 
 ---
 
+# Parte C — Identidade visual do Acervo
+
+Objetivo: diferenciar visualmente o Acervo do Guardião da Escrita,
+que compartilha a mesma base de interface CustomTkinter do WDS, sem
+redesenhar a aplicação nem alterar seu comportamento.
+
+**Escopo:**
+- tema de cor próprio do Acervo, com destaque teal restrito ao
+  cabeçalho da navegação principal e ao item de navegação ativo;
+- ícone exclusivo de janela e barra de tarefas;
+- checagem visual de contraste do texto sobre o destaque nos modos
+  claro e escuro.
+
+**Decisão:** os fundos, listas, campos e botões de ação permanecem
+neutros. A identidade usa apenas `#1F6E64` no modo claro e `#155048`
+no escuro, com texto `#F1FAF7`, para não colidir com o destaque
+índigo/roxo definido separadamente para o Guardião da Escrita.
+
+---
+
 # Parte A — Navegação Associativa
 
 Objetivo: aproximar a navegação de um fluxo de pensamento/lembrança,
@@ -169,3 +189,5 @@ acompanhar o tamanho dos backups depois.
 4. **A.3 — Menos itens por padrão.**
 5. **A.2 — Peso visual por score.** O mais cosmético, mais legível
    depois do corte do item A.3 já estar em vigor.
+6. **Parte C — Identidade visual do Acervo.** Independente das
+   partes A e B; aplicar sem alterar o fluxo de navegação existente.

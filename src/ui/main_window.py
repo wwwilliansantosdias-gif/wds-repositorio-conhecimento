@@ -14,6 +14,7 @@ from pathlib import Path
 
 UI_DIRECTORY = Path(__file__).resolve().parent
 SOURCE_DIRECTORY = UI_DIRECTORY.parent
+ICON_PATH = UI_DIRECTORY / "assets" / "acervo.ico"
 for caminho in (SOURCE_DIRECTORY, UI_DIRECTORY):
     if str(caminho) not in sys.path:
         sys.path.insert(0, str(caminho))
@@ -59,6 +60,7 @@ class MainWindow(ctk.CTk):
         super().__init__()
         self.title("WDS - Acervo de Conhecimento")
         self.geometry("1100x700")
+        self.iconbitmap(default=str(ICON_PATH))
 
         self._montar_servicos()
         self._montar_controllers()
