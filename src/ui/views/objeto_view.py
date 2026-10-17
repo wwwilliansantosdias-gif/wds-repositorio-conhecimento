@@ -31,6 +31,7 @@ from widgets.resultado_item import ResultadoItem
 from widgets.tag_chip import TagChip
 
 LIMITE_RESUMO_DETALHE = 2000
+LIMITE_TITULO_TRILHA = 24
 
 
 class ObjetoView(ctk.CTkScrollableFrame):
@@ -56,6 +57,9 @@ class ObjetoView(ctk.CTkScrollableFrame):
         self._ao_editar_objeto = ao_editar_objeto
         self._objeto_id_atual: int | None = None
         self._sugestoes_expandido = False
+        self._titulo_atual = ""
+        self._trilha: list[tuple[int, str]] = []
+        self._manter_trilha = False
 
         self.grid_columnconfigure(0, weight=1)
 
@@ -65,6 +69,7 @@ class ObjetoView(ctk.CTkScrollableFrame):
         for widget in self.winfo_children():
             widget.destroy()
         self._objeto_id_atual = None
+        self._trilha = []
         ctk.CTkLabel(
             self,
             text="Selecione um resultado\npara ver os detalhes aqui.",
@@ -73,8 +78,15 @@ class ObjetoView(ctk.CTkScrollableFrame):
 
     def mostrar_objeto(self, objeto_id: int) -> None:
         """Carrega e exibe os detalhes de um objeto especifico."""
-        if getattr(self, "_objeto_id_atual", None) != objeto_id:
+        objeto_mudou = getattr(self, "_objeto_id_atual", None) != objeto_id
+        if objeto_mudou:
             self._sugestoes_expandido = False
+        # A trilha so sobrevive se a navegacao nasceu na propria trilha ou
+        # no Contexto (flag consumida aqui) ou se e apenas uma recarga do
+        # mesmo objeto (tags, "Ver mais", novo relacionamento).
+        if objeto_mudou and not getattr(self, "_manter_trilha", False):
+            self._trilha = []
+        self._manter_trilha = False
         try:
             detalhe = self._objeto_controller.carregar_detalhe(objeto_id)
         except LookupError:
@@ -82,11 +94,16 @@ class ObjetoView(ctk.CTkScrollableFrame):
             return
 
         self._objeto_id_atual = objeto_id
+        self._titulo_atual = detalhe.objeto.titulo
 
         for widget in self.winfo_children():
             widget.destroy()
 
         linha = 0
+
+        if getattr(self, "_trilha", None):
+            self._renderizar_trilha(linha)
+            linha += 1
 
         cabecalho_frame = ctk.CTkFrame(self, fg_color="transparent")
         cabecalho_frame.grid(
@@ -249,7 +266,8 @@ class ObjetoView(ctk.CTkScrollableFrame):
                 objeto=objeto,
                 tags=tags,
                 score=score,
-                ao_selecionar=self._ao_selecionar_objeto,
+                ao_selecionar=self._ao_selecionar_pelo_contexto,
+                peso_visual_por_score=score is not None,
             )
             item.grid(row=linha, column=0, sticky="ew", padx=16, pady=(0, 8))
             linha += 1
@@ -267,6 +285,63 @@ class ObjetoView(ctk.CTkScrollableFrame):
             linha += 1
 
         return linha
+
+    def _ao_selecionar_pelo_contexto(self, objeto_id: int) -> None:
+        """Clique em Relacionamentos ou Sugestoes Semanticas: registra o
+        objeto atual na trilha antes de navegar. O callback externo nao
+        muda de assinatura; o flag e consumido por mostrar_objeto."""
+        if self._objeto_id_atual is not None:
+            self._trilha.append((self._objeto_id_atual, self._titulo_atual))
+        self._navegar_mantendo_trilha(objeto_id)
+
+    def _voltar_na_trilha(self, indice: int) -> None:
+        """Volta ao ponto clicado e descarta o que vinha depois dele."""
+        objeto_id = self._trilha[indice][0]
+        del self._trilha[indice:]
+        self._navegar_mantendo_trilha(objeto_id)
+
+    def _navegar_mantendo_trilha(self, objeto_id: int) -> None:
+        self._manter_trilha = True
+        try:
+            self._ao_selecionar_objeto(objeto_id)
+        finally:
+            self._manter_trilha = False
+
+    def _renderizar_trilha(self, linha: int) -> None:
+        trilha_frame = ctk.CTkFrame(self, fg_color="transparent")
+        trilha_frame.grid(row=linha, column=0, sticky="w", padx=16, pady=(12, 0))
+        coluna = 0
+        for indice, (_, titulo) in enumerate(self._trilha):
+            ctk.CTkButton(
+                trilha_frame,
+                text=self._abreviar_titulo(titulo),
+                width=0,
+                height=20,
+                fg_color="transparent",
+                hover_color="gray40",
+                text_color="#4FA9A0",
+                font=ctk.CTkFont(size=11),
+                command=lambda indice=indice: self._voltar_na_trilha(indice),
+            ).grid(row=0, column=coluna)
+            ctk.CTkLabel(
+                trilha_frame,
+                text="›",
+                font=ctk.CTkFont(size=11),
+                text_color="gray60",
+            ).grid(row=0, column=coluna + 1)
+            coluna += 2
+        ctk.CTkLabel(
+            trilha_frame,
+            text=self._abreviar_titulo(self._titulo_atual),
+            font=ctk.CTkFont(size=11, weight="bold"),
+            text_color="gray60",
+        ).grid(row=0, column=coluna, padx=(4, 0))
+
+    @staticmethod
+    def _abreviar_titulo(titulo: str) -> str:
+        if len(titulo) <= LIMITE_TITULO_TRILHA:
+            return titulo
+        return titulo[: LIMITE_TITULO_TRILHA - 1].rstrip() + "…"
 
     def _expandir_sugestoes(self) -> None:
         self._sugestoes_expandido = True

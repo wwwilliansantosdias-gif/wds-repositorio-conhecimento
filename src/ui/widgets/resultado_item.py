@@ -14,6 +14,28 @@ import customtkinter as ctk
 
 from models import Objeto, Tag
 
+SCORE_FORTE = 75.0
+SCORE_FRACO = 50.0
+
+COR_SCORE_FORTE = ("#0F8F7E", "#3DDBC0")
+COR_SCORE_MEDIO = "#4FA9A0"
+COR_SCORE_FRACO = ("gray75", "gray40")
+
+
+def estilo_por_score(score: float) -> tuple[Any, Any | None]:
+    """Devolve (cor do score, cor do titulo) para um score de sugestao.
+
+    Faixas (docs/wds-1.2-planejamento.md, item A.2): >= 75 destaca o
+    score; de 50 a 75 mantem o visual padrao; < 50 apaga score e titulo
+    alem do gray60 usado em texto secundario. Cor do titulo None
+    significa a cor padrao do tema.
+    """
+    if score >= SCORE_FORTE:
+        return COR_SCORE_FORTE, None
+    if score >= SCORE_FRACO:
+        return COR_SCORE_MEDIO, None
+    return COR_SCORE_FRACO, COR_SCORE_FRACO
+
 
 class ResultadoItem(ctk.CTkFrame):
     """Apresenta um objeto recuperado em uma lista de resultados."""
@@ -26,6 +48,7 @@ class ResultadoItem(ctk.CTkFrame):
         ao_selecionar: Callable[[int], None],
         score: float | None = None,
         trecho: str | None = None,
+        peso_visual_por_score: bool = False,
         **kwargs: Any,
     ) -> None:
         super().__init__(master, corner_radius=8, **kwargs)
@@ -38,11 +61,19 @@ class ResultadoItem(ctk.CTkFrame):
         cabecalho.grid(row=0, column=0, sticky="ew", padx=12, pady=(10, 0))
         cabecalho.grid_columnconfigure(0, weight=1)
 
+        cor_score = COR_SCORE_MEDIO
+        opcoes_titulo: dict[str, Any] = {}
+        if peso_visual_por_score and score is not None:
+            cor_score, cor_titulo = estilo_por_score(score)
+            if cor_titulo is not None:
+                opcoes_titulo["text_color"] = cor_titulo
+
         titulo_label = ctk.CTkLabel(
             cabecalho,
             text=objeto.titulo,
             font=ctk.CTkFont(size=14, weight="bold"),
             anchor="w",
+            **opcoes_titulo,
         )
         titulo_label.grid(row=0, column=0, sticky="w")
 
@@ -51,7 +82,7 @@ class ResultadoItem(ctk.CTkFrame):
                 cabecalho,
                 text=f"{score:.0f}%",
                 font=ctk.CTkFont(size=12, weight="bold"),
-                text_color="#4FA9A0",
+                text_color=cor_score,
             ).grid(row=0, column=1, padx=(8, 0))
 
         ctk.CTkLabel(

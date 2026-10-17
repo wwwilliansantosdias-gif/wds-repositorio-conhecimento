@@ -18,7 +18,13 @@ for caminho in (SOURCE_DIRECTORY, UI_DIRECTORY):
 
 from controllers.tag_controller import ResultadoAdicionarTag
 from models import Objeto, Tag
-from views.objeto_view import LIMITE_RESUMO_DETALHE, ObjetoView
+from views.objeto_view import LIMITE_RESUMO_DETALHE, LIMITE_TITULO_TRILHA, ObjetoView
+from widgets.resultado_item import (
+    COR_SCORE_FORTE,
+    COR_SCORE_FRACO,
+    COR_SCORE_MEDIO,
+    estilo_por_score,
+)
 
 
 class ObjetoViewTests(unittest.TestCase):
@@ -488,6 +494,184 @@ class ObjetoViewTests(unittest.TestCase):
 
         mostrar_erro.assert_called_once()
         view.mostrar_objeto.assert_not_called()
+
+
+class TrilhaAssociativaTests(unittest.TestCase):
+    """Item A.1: trilha de navegacao dentro de Objeto em Foco."""
+
+    @staticmethod
+    def _criar_view(objeto_id: int | None, titulo: str = "Atual") -> ObjetoView:
+        view = object.__new__(ObjetoView)
+        view._objeto_id_atual = objeto_id
+        view._titulo_atual = titulo
+        view._trilha = []
+        view._manter_trilha = False
+        view._sugestoes_expandido = False
+        return view
+
+    @staticmethod
+    def _mostrar(view: ObjetoView, objeto_id: int, titulo: str = "Novo") -> None:
+        objeto = Objeto(
+            id=objeto_id,
+            titulo=titulo,
+            tipo="Nota",
+            caminho="x",
+            resumo=None,
+            hash_arquivo=None,
+            status="ativo",
+            data_criacao="2026-08-01T10:00:00+00:00",
+            data_edicao="2026-08-01T10:00:00+00:00",
+            data_exclusao=None,
+        )
+        detalhe = SimpleNamespace(
+            objeto=objeto, tags=[], relacionamentos=[], sugestoes=[]
+        )
+        view._objeto_controller = Mock(carregar_detalhe=Mock(return_value=detalhe))
+        view._ao_editar_objeto = Mock()
+        view._relacao_controller = None
+        view._renderizar_tags_e_entrada = Mock()
+        view._renderizar_secao_contexto = Mock(side_effect=lambda linha, **kwargs: linha + 1)
+        view._renderizar_trilha = Mock()
+        view.winfo_children = Mock(return_value=[])
+        with (
+            patch("views.objeto_view.ctk.CTkFrame", return_value=Mock()),
+            patch("views.objeto_view.ctk.CTkLabel", return_value=Mock()),
+            patch("views.objeto_view.ctk.CTkButton", return_value=Mock()),
+            patch("views.objeto_view.ctk.CTkFont"),
+        ):
+            view.mostrar_objeto(objeto_id)
+
+    def test_clique_no_contexto_registra_objeto_atual_e_navega_com_flag(self) -> None:
+        view = self._criar_view(1, "Primeiro")
+        flags: list[bool] = []
+        view._ao_selecionar_objeto = Mock(
+            side_effect=lambda _id: flags.append(view._manter_trilha)
+        )
+
+        view._ao_selecionar_pelo_contexto(2)
+
+        self.assertEqual(view._trilha, [(1, "Primeiro")])
+        view._ao_selecionar_objeto.assert_called_once_with(2)
+        self.assertEqual(flags, [True])
+        self.assertFalse(view._manter_trilha)
+
+    def test_flag_e_limpo_mesmo_se_o_callback_externo_falhar(self) -> None:
+        view = self._criar_view(1)
+        view._ao_selecionar_objeto = Mock(side_effect=RuntimeError("falha"))
+
+        with self.assertRaises(RuntimeError):
+            view._ao_selecionar_pelo_contexto(2)
+
+        self.assertFalse(view._manter_trilha)
+
+    def test_trilha_cresce_a_cada_clique_no_contexto(self) -> None:
+        view = self._criar_view(1, "A")
+        view._ao_selecionar_objeto = Mock(
+            side_effect=lambda objeto_id: self._mostrar(view, objeto_id, f"T{objeto_id}")
+        )
+
+        view._ao_selecionar_pelo_contexto(2)
+        view._ao_selecionar_pelo_contexto(3)
+
+        self.assertEqual(view._trilha, [(1, "A"), (2, "T2")])
+        self.assertEqual(view._objeto_id_atual, 3)
+
+    def test_outra_forma_de_chegar_a_um_objeto_reinicia_a_trilha(self) -> None:
+        view = self._criar_view(2, "B")
+        view._trilha = [(1, "A")]
+
+        self._mostrar(view, 9)
+
+        self.assertEqual(view._trilha, [])
+
+    def test_recarregar_o_mesmo_objeto_preserva_a_trilha(self) -> None:
+        view = self._criar_view(2, "B")
+        view._trilha = [(1, "A")]
+
+        self._mostrar(view, 2)
+
+        self.assertEqual(view._trilha, [(1, "A")])
+
+    def test_espaco_reservado_limpa_a_trilha(self) -> None:
+        view = self._criar_view(2)
+        view._trilha = [(1, "A")]
+        view.winfo_children = Mock(return_value=[])
+        view.grid_columnconfigure = Mock()
+
+        with patch("views.objeto_view.ctk.CTkLabel", return_value=Mock()):
+            view.mostrar_espaco_reservado()
+
+        self.assertEqual(view._trilha, [])
+
+    def test_voltar_na_trilha_descarta_o_que_vinha_depois(self) -> None:
+        view = self._criar_view(4, "D")
+        view._trilha = [(1, "A"), (2, "B"), (3, "C")]
+        view._ao_selecionar_objeto = Mock(
+            side_effect=lambda objeto_id: self._mostrar(view, objeto_id)
+        )
+
+        view._voltar_na_trilha(1)
+
+        view._ao_selecionar_objeto.assert_called_once_with(2)
+        self.assertEqual(view._trilha, [(1, "A")])
+
+    def test_trilha_so_e_renderizada_quando_nao_esta_vazia(self) -> None:
+        view = self._criar_view(None)
+        self._mostrar(view, 1)
+        view._renderizar_trilha.assert_not_called()
+
+        view._trilha = [(1, "A")]
+        view._manter_trilha = True
+        self._mostrar(view, 2)
+        view._renderizar_trilha.assert_called_once_with(0)
+
+    def test_titulo_longo_e_abreviado_na_trilha(self) -> None:
+        longo = "x" * 60
+
+        abreviado = ObjetoView._abreviar_titulo(longo)
+
+        self.assertEqual(len(abreviado), LIMITE_TITULO_TRILHA)
+        self.assertTrue(abreviado.endswith("…"))
+        self.assertEqual(ObjetoView._abreviar_titulo("curto"), "curto")
+
+
+class PesoVisualPorScoreTests(unittest.TestCase):
+    """Item A.2: cor do score das Sugestoes Semanticas."""
+
+    def test_score_forte_usa_cor_de_destaque(self) -> None:
+        for score in (75.0, 90.0, 100.0):
+            with self.subTest(score=score):
+                self.assertEqual(estilo_por_score(score), (COR_SCORE_FORTE, None))
+
+    def test_score_medio_mantem_o_visual_atual(self) -> None:
+        for score in (50.0, 62.0, 74.9):
+            with self.subTest(score=score):
+                self.assertEqual(estilo_por_score(score), (COR_SCORE_MEDIO, None))
+
+    def test_score_fraco_apaga_score_e_titulo(self) -> None:
+        for score in (0.0, 30.0, 49.9):
+            with self.subTest(score=score):
+                self.assertEqual(
+                    estilo_por_score(score), (COR_SCORE_FRACO, COR_SCORE_FRACO)
+                )
+
+    def test_secao_de_contexto_so_pesa_sugestoes_com_score(self) -> None:
+        view = object.__new__(ObjetoView)
+        view._sugestoes_expandido = False
+        view._tag_controller = Mock(listar_por_objeto=Mock(return_value=[]))
+        view._ao_selecionar_objeto = Mock()
+        objeto = Mock(id=1)
+
+        with (
+            patch("views.objeto_view.ctk.CTkLabel", return_value=Mock()),
+            patch("views.objeto_view.ctk.CTkFont"),
+            patch("views.objeto_view.ResultadoItem") as item,
+        ):
+            view._renderizar_secao_contexto(0, "Rel", [(objeto, None)], "vazio")
+            view._renderizar_secao_contexto(0, "Sug", [(objeto, 80.0)], "vazio")
+
+        pesos = [chamada.kwargs["peso_visual_por_score"] for chamada in item.call_args_list]
+        self.assertEqual(pesos, [False, True])
 
 
 if __name__ == "__main__":
