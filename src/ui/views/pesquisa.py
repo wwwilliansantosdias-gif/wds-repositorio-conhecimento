@@ -70,7 +70,10 @@ class PesquisaView(ctk.CTkFrame):
             self._renderizar([], "Digite um termo na barra acima para pesquisar o Acervo.")
             return
 
-        self._mostrar_mensagem("Buscando...")
+        mensagem = "Buscando..."
+        if not self._pesquisa_controller.busca_semantica_disponivel:
+            mensagem = "Buscando texto... (busca semântica carregando)"
+        self._mostrar_mensagem(mensagem)
         executar_em_segundo_plano(
             self,
             lambda: self._pesquisa_controller.pesquisar(termo),

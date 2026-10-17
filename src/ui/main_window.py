@@ -10,6 +10,8 @@ os injeta nas views -- nenhuma view acessa um Service diretamente.
 from __future__ import annotations
 
 import sys
+import time
+import threading
 from pathlib import Path
 
 UI_DIRECTORY = Path(__file__).resolve().parent
@@ -25,7 +27,7 @@ from persistence import Database
 from services.acervo_service import AcervoService
 from services.backup_service import BackupService
 from services.config_service import ConfigService
-from services.embedding_service import EmbeddingService
+from services.embedding_service import LazyEmbeddingService
 from services.importacao_service import ImportacaoService
 from services.objeto_service import ObjetoService
 from services.pesquisa_service import PesquisaService
@@ -65,6 +67,8 @@ class MainWindow(ctk.CTk):
         self._montar_servicos()
         self._montar_controllers()
         self._montar_layout()
+        self._startup_inicio = time.perf_counter()
+        self.after(100, self._iniciar_embedding_em_background)
 
     def _montar_servicos(self) -> None:
         self.database = Database()
@@ -74,7 +78,7 @@ class MainWindow(ctk.CTk):
         self.tag_service = TagService(self.database)
         self.relacao_service = RelacaoService(self.database)
         self.pesquisa_service = PesquisaService(self.database)
-        self.embedding_service = EmbeddingService(self.database)
+        self.embedding_service = LazyEmbeddingService(self.database)
         self.acervo_service = AcervoService(
             self.objeto_service, self.embedding_service
         )
@@ -164,6 +168,24 @@ class MainWindow(ctk.CTk):
             ao_editar_objeto=self._ao_editar_objeto,
         )
         self.objeto_view.grid(row=0, column=2, sticky="nsew", padx=(6, 12), pady=12)
+
+    def _iniciar_embedding_em_background(self) -> None:
+        """Inicia o modelo somente depois de a janela poder responder."""
+        self.toolbar.definir_status_busca("Carregando busca semântica...")
+
+        def carregar() -> None:
+            self.embedding_service.carregar()
+            self.after(0, self._finalizar_carregamento_embedding)
+
+        threading.Thread(target=carregar, daemon=True, name="wds-embedding").start()
+
+    def _finalizar_carregamento_embedding(self) -> None:
+        if self.embedding_service.disponivel:
+            self.toolbar.definir_status_busca("Busca semântica disponível")
+        else:
+            self.toolbar.definir_status_busca(
+                "Busca semântica indisponível; busca textual disponível"
+            )
 
     def _ao_pesquisar(self, termo: str) -> None:
         self.pesquisa_view.pesquisar(termo)

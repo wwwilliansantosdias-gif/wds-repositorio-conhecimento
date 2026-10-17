@@ -66,6 +66,14 @@ class Toolbar(ctk.CTkFrame):
         self.search_bar = SearchBar(self, ao_pesquisar=ao_pesquisar)
         self.search_bar.grid(row=0, column=1, sticky="ew", pady=12)
 
+        self.status_busca = ctk.CTkLabel(
+            self,
+            text="",
+            text_color=_acervo_theme_color("accent_text_color"),
+            anchor="w",
+        )
+        self.status_busca.grid(row=1, column=1, sticky="w", padx=(0, 8), pady=(0, 4))
+
         self.botao_biblioteca = ctk.CTkButton(
             self,
             text="Biblioteca",
@@ -130,6 +138,10 @@ class Toolbar(ctk.CTkFrame):
             "backup": self.botao_backup,
             "configuracoes": self.botao_configuracoes,
         }
+
+    def definir_status_busca(self, texto: str) -> None:
+        """Atualiza o indicador discreto de disponibilidade semântica."""
+        self.status_busca.configure(text=texto)
 
     def _acionar_navegacao(
         self, destino: str, acao: Callable[[], None]

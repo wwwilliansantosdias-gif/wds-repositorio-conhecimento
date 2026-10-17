@@ -89,6 +89,11 @@ class PesquisaController:
 
         return resultados
 
+    @property
+    def busca_semantica_disponivel(self) -> bool:
+        """Indica se o facade semantico ja terminou seu carregamento."""
+        return bool(getattr(self._embedding_service, "disponivel", True))
+
     def listar_todos(self) -> list[ResultadoPesquisa]:
         """Lista todos os objetos ativos do Acervo, sem nenhum termo de
         busca -- usado pela Biblioteca (docs/interface-grafica.md,

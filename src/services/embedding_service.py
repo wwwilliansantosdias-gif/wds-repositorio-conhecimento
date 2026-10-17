@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from pathlib import Path
-from threading import Lock
+from threading import Lock, RLock
+from typing import TYPE_CHECKING, Any
 
-import chromadb
-from chromadb.api.models.Collection import Collection
-from sentence_transformers import SentenceTransformer
+if TYPE_CHECKING:
+    import chromadb
+    from chromadb.api.models.Collection import Collection
+    from sentence_transformers import SentenceTransformer
 
 from models import Objeto
 from services.base import BaseService
@@ -19,7 +21,7 @@ COLLECTION_NAME = "objetos_conhecimento"
 MODEL_NAME = "paraphrase-multilingual-MiniLM-L12-v2"
 _CANDIDATE_MULTIPLIER = 3
 
-_model: SentenceTransformer | None = None
+_model: "SentenceTransformer | None" = None
 _model_lock = Lock()
 
 
@@ -33,9 +35,11 @@ class EmbeddingService(BaseService):
     ) -> None:
         super().__init__(database)
         self.chroma_path = Path(chroma_path)
+        import chromadb
+
         self._model = _obter_modelo()
         self._client = chromadb.PersistentClient(path=str(chroma_path))
-        self._collection: Collection = self._client.get_or_create_collection(
+        self._collection: Any = self._client.get_or_create_collection(
             name=COLLECTION_NAME,
             metadata={"hnsw:space": "cosine"},
             embedding_function=None,
@@ -165,14 +169,85 @@ class EmbeddingService(BaseService):
         return self._model.encode(texto).tolist()
 
 
-def _obter_modelo() -> SentenceTransformer:
+def _obter_modelo() -> "SentenceTransformer":
     """Carrega o modelo uma vez por processo, pois a carga é custosa."""
     global _model
 
     with _model_lock:
         if _model is None:
+            from sentence_transformers import SentenceTransformer
+
             _model = SentenceTransformer(MODEL_NAME)
         return _model
+
+
+class LazyEmbeddingService:
+    """Facade que deixa o acervo utilizavel enquanto a IA inicializa.
+
+    Chamadas de escrita feitas antes da disponibilidade semantica ficam
+    enfileiradas e sao reproduzidas na mesma ordem apos o servico real
+    estar pronto. Consultas semanticas retornam vazio durante a carga;
+    a busca textual continua independente no PesquisaService.
+    """
+
+    def __init__(self, database, chroma_path: Path | str = DEFAULT_CHROMA_PATH) -> None:
+        self._database = database
+        self._chroma_path = chroma_path
+        self._servico: EmbeddingService | None = None
+        self._erro: Exception | None = None
+        self._pendentes: list[tuple[str, tuple, dict]] = []
+        self._lock = RLock()
+
+    @property
+    def disponivel(self) -> bool:
+        with self._lock:
+            return self._servico is not None
+
+    @property
+    def erro(self) -> Exception | None:
+        with self._lock:
+            return self._erro
+
+    def carregar(self) -> None:
+        """Carrega o servico pesado; deve ser chamado fora da UI."""
+        try:
+            servico = EmbeddingService(self._database, self._chroma_path)
+        except Exception as erro:  # noqa: BLE001 - exposto no indicador da UI
+            with self._lock:
+                self._erro = erro
+            return
+
+        with self._lock:
+            self._servico = servico
+            pendentes = self._pendentes
+            self._pendentes = []
+
+        for nome, args, kwargs in pendentes:
+            getattr(servico, nome)(*args, **kwargs)
+
+    def _encaminhar_ou_enfileirar(self, nome: str, *args, **kwargs) -> None:
+        with self._lock:
+            if self._servico is None:
+                self._pendentes.append((nome, args, kwargs))
+                return
+            servico = self._servico
+        getattr(servico, nome)(*args, **kwargs)
+
+    def indexar_objeto(self, *args, **kwargs) -> None:
+        self._encaminhar_ou_enfileirar("indexar_objeto", *args, **kwargs)
+
+    def remover_do_indice(self, *args, **kwargs) -> None:
+        self._encaminhar_ou_enfileirar("remover_do_indice", *args, **kwargs)
+
+    def buscar_semantico(self, *args, **kwargs) -> list:
+        with self._lock:
+            servico = self._servico
+        return [] if servico is None else servico.buscar_semantico(*args, **kwargs)
+
+    def buscar_similares_a_objeto(self, *args, **kwargs) -> list:
+        with self._lock:
+            servico = self._servico
+        return [] if servico is None else servico.buscar_similares_a_objeto(*args, **kwargs)
 
 
 def _score_percentual(distancia: float) -> float:

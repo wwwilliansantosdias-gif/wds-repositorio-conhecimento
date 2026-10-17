@@ -37,6 +37,29 @@ no escuro, com texto `#F1FAF7`, para não colidir com o destaque
 
 ---
 
+# Parte D — Desempenho de inicialização
+
+Objetivo: reduzir drasticamente o tempo até a janela do Acervo ficar
+visível, sem alterar a qualidade ou a lógica da busca semântica.
+
+**Motivo:** o carregamento síncrono de `sentence-transformers` e
+ChromaDB antes da montagem da interface deixa o usuário esperando por
+minutos, sem qualquer retorno visual.
+
+**Escopo:**
+- diagnóstico instrumentado do startup, com medição por etapa;
+- carregamento preguiçoso de `EmbeddingService` (modelo e ChromaDB)
+  em thread separada, depois que a janela estiver visível;
+- indicador discreto da disponibilidade da busca semântica;
+- medição antes e depois da mudança, para confirmar a melhoria.
+
+**Decisão:** SQLite e FTS5 permanecem disponíveis desde a abertura.
+Enquanto a busca semântica estiver carregando, a pesquisa textual
+continua operacional e a interface informa o estado sem bloquear a
+janela. O modelo e o índice vetorial não serão trocados.
+
+---
+
 # Parte A — Navegação Associativa
 
 Objetivo: aproximar a navegação de um fluxo de pensamento/lembrança,
@@ -191,3 +214,5 @@ acompanhar o tamanho dos backups depois.
    depois do corte do item A.3 já estar em vigor.
 6. **Parte C — Identidade visual do Acervo.** Independente das
    partes A e B; aplicar sem alterar o fluxo de navegação existente.
+7. **Parte D — Desempenho de inicialização.** Independente das
+   partes A e B; preserva a busca e a indexação existentes.
